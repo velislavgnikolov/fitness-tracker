@@ -157,10 +157,8 @@ async function openDayModal(root, iso) {
     modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">${isEdit ? 'Редакция' : 'Нова'} тренировка</h3>
-      <div class="row">
-        <div class="field"><label>От</label><input type="time" id="w-start" value="${existing?.startTime || '18:00'}"></div>
-        <div class="field"><label>До</label><input type="time" id="w-end" value="${existing?.endTime || '19:00'}"></div>
-      </div>
+      <div class="field"><label>От</label><input type="time" id="w-start" value="${existing?.startTime || '18:00'}"></div>
+      <div class="field"><label>До</label><input type="time" id="w-end" value="${existing?.endTime || '19:00'}"></div>
       <div class="field"><label>Какво тренира</label><input type="text" id="w-label" placeholder="напр. Гърди и трицепс" value="${existing ? escapeHtml(existing.label) : ''}"></div>
       <div class="field">
         <label>Цвят</label>
