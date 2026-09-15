@@ -19,11 +19,9 @@ export async function renderExercises(root) {
 
   const volumeByGroup = {};
   let grandTotalVolume = 0;
-  let grandTotalReps = 0;
   allSets.forEach((s) => {
     const vol = (s.reps || 0) * (s.weight || 0);
     grandTotalVolume += vol;
-    grandTotalReps += s.reps || 0;
     const ex = exerciseById[s.exerciseId];
     if (ex) volumeByGroup[ex.muscleGroup] = (volumeByGroup[ex.muscleGroup] || 0) + vol;
   });
@@ -43,10 +41,6 @@ export async function renderExercises(root) {
       <div class="stat-tile">
         <div class="stat-value">${fmtVolume(grandTotalVolume)}</div>
         <div class="stat-label">общо вдигнати кг</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-value">${fmtVolume(grandTotalReps)}</div>
-        <div class="stat-label">общо повторения</div>
       </div>
     </div>
 
