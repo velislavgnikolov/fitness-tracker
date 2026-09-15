@@ -37,6 +37,18 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
+// Prevent iOS double-tap-to-zoom: even in standalone/home-screen mode, a fast
+// double tap can still trigger a zoom gesture that desyncs fixed-position
+// elements (like the tab bar) from where touches actually land.
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 350) {
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, { passive: false });
+
 // Lock background scroll/movement while any bottom sheet is open, so dragging
 // to dismiss it can't also scroll or bounce the page underneath.
 let scrollLockY = 0;
