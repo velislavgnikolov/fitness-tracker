@@ -23,7 +23,7 @@ export async function renderWeight(root) {
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex;align-items:baseline;gap:10px;">
         <div style="font-size:32px;font-family:'Space Grotesk',sans-serif;font-weight:600;">${latest ? latest.weightKg.toFixed(1) : '—'} <span style="font-size:14px;color:var(--text-dim);font-weight:400;">кг</span></div>
-        ${diff != null ? `<span style="font-size:13px;color:${diff <= 0 ? '#34d399' : '#f87171'};">${diff > 0 ? '+' : ''}${diff.toFixed(1)}кг</span>` : ''}
+        ${diff != null ? `<span style="font-size:13px;color:${diff <= 0 ? 'var(--success)' : 'var(--danger)'};">${diff > 0 ? '+' : ''}${diff.toFixed(1)}кг</span>` : ''}
       </div>
       <div style="font-size:12px;color:var(--text-faint);margin-top:2px;">${latest ? fmtShort(latest.date) : 'Няма записи'}</div>
     </div>
@@ -31,6 +31,8 @@ export async function renderWeight(root) {
     <div class="row" style="margin-bottom:14px;">
       ${RANGES.map((r) => `<button class="btn ${r.id === activeRange ? 'btn-primary' : 'btn-ghost'}" data-range="${r.id}" style="padding:9px;font-size:13px;">${r.label}</button>`).join('')}
     </div>
+
+    ${filtered.length >= 2 ? rangeStats(filtered) : ''}
 
     <div class="card" style="margin-bottom:16px;">
       ${filtered.length >= 2 ? weightChart(filtered) : `<div class="empty-state">Нужни са поне 2 записа за графика.</div>`}
@@ -73,6 +75,30 @@ export async function renderWeight(root) {
   };
 }
 
+function rangeStats(entries) {
+  const weights = entries.map((e) => e.weightKg);
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+  const avg = weights.reduce((s, w) => s + w, 0) / weights.length;
+  const change = entries[entries.length - 1].weightKg - entries[0].weightKg;
+  const changeColor = change <= 0 ? 'var(--success)' : 'var(--danger)';
+  return `
+    <div class="stat-row" style="margin-bottom:14px;">
+      <div class="stat-tile">
+        <div class="stat-value" style="color:${changeColor};">${change > 0 ? '+' : ''}${change.toFixed(1)}</div>
+        <div class="stat-label">промяна (кг)</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${avg.toFixed(1)}</div>
+        <div class="stat-label">средно</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${min.toFixed(1)}–${max.toFixed(1)}</div>
+        <div class="stat-label">мин–макс</div>
+      </div>
+    </div>`;
+}
+
 function weightChart(entries) {
   const w = 320, h = 160, padL = 34, padR = 10, padT = 14, padB = 22;
   const weights = entries.map((e) => e.weightKg);
@@ -111,14 +137,14 @@ function weightChart(entries) {
     <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block;">
       <defs>
         <linearGradient id="wfill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#d31c2b" stop-opacity="0.35"></stop>
-          <stop offset="100%" stop-color="#d31c2b" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color="#dc2430" stop-opacity="0.35"></stop>
+          <stop offset="100%" stop-color="#dc2430" stop-opacity="0"></stop>
         </linearGradient>
       </defs>
       ${gridLines}
       <path d="${areaPath}" fill="url(#wfill)"></path>
-      <path d="${trendPath}" fill="none" stroke="#9a9d96" stroke-width="1.6" stroke-dasharray="4 3"></path>
-      <path d="${linePath}" fill="none" stroke="#d31c2b" stroke-width="2.2"></path>
+      <path d="${trendPath}" fill="none" stroke="#c0c6c8" stroke-width="1.6" stroke-dasharray="4 3"></path>
+      <path d="${linePath}" fill="none" stroke="#dc2430" stroke-width="2.2"></path>
       ${xy.length <= 60 ? xy.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="#f2f1ed"></circle>`).join('') : ''}
     </svg>`;
 }

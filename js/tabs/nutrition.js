@@ -1,22 +1,24 @@
-import { DB, todayISO, fmtDateHuman } from '../db.js';
+import { DB, todayISO, fmtDateHuman, toISODateLocal } from '../db.js';
 import { searchOpenFoodFacts } from '../food-api.js';
 import { openRemindersManager } from '../reminders.js';
 
 let currentDate = todayISO();
 
 export async function renderNutrition(root) {
-  const [logs, goals] = await Promise.all([
-    DB.getAllByIndex('foodLog', 'date', currentDate),
+  const [allLogs, goals] = await Promise.all([
+    DB.getAll('foodLog'),
     getGoals(),
   ]);
 
-  const totals = logs.reduce(
-    (acc, l) => {
-      acc.kcal += l.kcal; acc.protein += l.protein; acc.carbs += l.carbs; acc.fat += l.fat;
-      return acc;
-    },
-    { kcal: 0, protein: 0, carbs: 0, fat: 0 }
-  );
+  const logs = allLogs.filter((l) => l.date === currentDate);
+  const totals = sumLogs(logs);
+
+  const todayIso = todayISO();
+  const streak = computeStreak(allLogs, todayIso);
+  const last7 = computeLast7(allLogs, todayIso);
+  const avg7 = Math.round(last7.reduce((s, d) => s + d.kcal, 0) / 7);
+  const kcalPct = pct(totals.kcal, goals.kcalGoal);
+  const remaining = goals.kcalGoal - totals.kcal;
 
   root.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -31,19 +33,38 @@ export async function renderNutrition(root) {
     </div>
 
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div>
-          <div style="font-size:28px;font-family:'Space Grotesk',sans-serif;font-weight:600;">${Math.round(totals.kcal)} <span style="font-size:14px;color:var(--text-dim);font-weight:400;">/ ${goals.kcalGoal} kcal</span></div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${donutRing(kcalPct)}
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:24px;font-family:'Space Grotesk',sans-serif;font-weight:600;line-height:1.1;">${Math.round(totals.kcal)} <span style="font-size:13px;color:var(--text-faint);font-weight:400;">/ ${goals.kcalGoal} kcal</span></div>
+          <div style="font-size:12.5px;color:${remaining >= 0 ? 'var(--text-faint)' : 'var(--danger)'};margin-top:3px;">${remaining >= 0 ? `остават ${Math.round(remaining)} kcal` : `${Math.round(-remaining)} kcal над целта`}</div>
         </div>
         <button class="icon-btn" id="edit-goals">${gearIcon()}</button>
       </div>
-      <div class="progress-track" style="margin-bottom:16px;">
-        <div class="progress-fill" style="width:${pct(totals.kcal, goals.kcalGoal)}%"></div>
+      <div style="margin-top:16px;">
+        ${macroBar('Протеин', totals.protein, goals.proteinGoal, 'var(--accent)')}
+        ${macroBar('Въглехидрати', totals.carbs, goals.carbsGoal, 'var(--silver)')}
+        ${macroBar('Мазнини', totals.fat, goals.fatGoal, '#8a8f91')}
       </div>
-      ${macroBar('Протеин', totals.protein, goals.proteinGoal, '#d31c2b')}
-      ${macroBar('Въглехидрати', totals.carbs, goals.carbsGoal, '#9a9d96')}
-      ${macroBar('Мазнини', totals.fat, goals.fatGoal, '#f2f1ed')}
     </div>
+
+    <div class="stat-row" style="margin-top:14px;">
+      <div class="stat-tile">
+        <div class="stat-value">${streak}</div>
+        <div class="stat-label">${streak === 1 ? 'ден поред' : 'дни поред'}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${avg7}</div>
+        <div class="stat-label">средно / 7 дни</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${logs.length}</div>
+        <div class="stat-label">записа днес</div>
+      </div>
+    </div>
+
+    <div class="section-heading">Последните 7 дни</div>
+    <div class="card">${weekBarChart(last7, goals.kcalGoal, todayIso)}</div>
 
     <div class="section-heading">Дневник</div>
     <div class="card" id="log-list">
@@ -66,6 +87,68 @@ export async function renderNutrition(root) {
       renderNutrition(root);
     };
   });
+}
+
+function sumLogs(logs) {
+  return logs.reduce(
+    (acc, l) => { acc.kcal += l.kcal; acc.protein += l.protein; acc.carbs += l.carbs; acc.fat += l.fat; return acc; },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+}
+
+function computeStreak(allLogs, todayIso) {
+  const dates = new Set(allLogs.map((l) => l.date));
+  let streak = 0;
+  let cursor = todayIso;
+  while (dates.has(cursor)) {
+    streak++;
+    cursor = shiftDate(cursor, -1);
+  }
+  return streak;
+}
+
+function computeLast7(allLogs, todayIso) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const iso = shiftDate(todayIso, -i);
+    const kcal = allLogs.filter((l) => l.date === iso).reduce((s, l) => s + l.kcal, 0);
+    days.push({ date: iso, kcal });
+  }
+  return days;
+}
+
+function donutRing(percent) {
+  const r = 38, c = 2 * Math.PI * r;
+  const clamped = Math.min(100, Math.max(0, percent));
+  const offset = c * (1 - clamped / 100);
+  const color = percent > 100 ? 'var(--danger)' : 'var(--accent)';
+  return `
+    <div style="position:relative;width:88px;height:88px;flex-shrink:0;">
+      <svg width="88" height="88" viewBox="0 0 88 88" style="transform:rotate(-90deg);">
+        <circle cx="44" cy="44" r="${r}" fill="none" stroke="var(--surface-strong)" stroke-width="7"></circle>
+        <circle cx="44" cy="44" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" style="transition:stroke-dashoffset 0.4s ease;"></circle>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;">${Math.round(percent)}%</div>
+    </div>`;
+}
+
+function weekBarChart(days, goal, todayIso) {
+  const maxVal = Math.max(goal, ...days.map((d) => d.kcal), 1);
+  const h = 84;
+  const bars = days.map((d) => {
+    const barH = d.kcal === 0 ? 3 : Math.max(4, (d.kcal / maxVal) * h);
+    const over = d.kcal > goal;
+    const label = new Date(d.date + 'T00:00:00').toLocaleDateString('bg-BG', { weekday: 'narrow' });
+    const isToday = d.date === todayIso;
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+        <div style="width:100%;height:${h}px;display:flex;align-items:flex-end;justify-content:center;">
+          <div style="width:60%;height:${barH.toFixed(0)}px;border-radius:5px;background:${over ? 'var(--danger)' : 'var(--accent)'};opacity:${d.kcal === 0 ? 0.15 : 1};"></div>
+        </div>
+        <div style="font-size:10px;font-weight:${isToday ? '600' : '400'};color:${isToday ? 'var(--text)' : 'var(--text-faint)'};text-transform:uppercase;">${label}</div>
+      </div>`;
+  }).join('');
+  return `<div style="display:flex;gap:8px;align-items:flex-end;">${bars}</div>`;
 }
 
 function logRow(l) {
@@ -104,7 +187,7 @@ function macroBar(label, val, goal, color) {
 function shiftDate(iso, delta) {
   const d = new Date(iso + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  return d.toISOString().slice(0, 10);
+  return toISODateLocal(d);
 }
 
 // ---------- Add food modal ----------

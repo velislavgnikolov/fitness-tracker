@@ -1,14 +1,36 @@
-import { DB } from '../db.js';
+import { DB, todayISO } from '../db.js';
 import { MUSCLE_GROUPS } from '../exercises-seed.js';
 
 export async function renderExercises(root) {
-  const exercises = await DB.getAll('exercises');
+  const [exercises, allSets] = await Promise.all([DB.getAll('exercises'), DB.getAll('workoutSets')]);
   const byGroup = {};
   MUSCLE_GROUPS.forEach((g) => byGroup[g.id] = []);
   exercises.forEach((e) => { (byGroup[e.muscleGroup] ||= []).push(e); });
 
+  const exerciseById = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const weekAgoIso = shiftDate(todayISO(), -6);
+  const recentSets = allSets.filter((s) => s.date >= weekAgoIso);
+  const groupCounts = {};
+  recentSets.forEach((s) => {
+    const ex = exerciseById[s.exerciseId];
+    if (ex) groupCounts[ex.muscleGroup] = (groupCounts[ex.muscleGroup] || 0) + 1;
+  });
+
   root.innerHTML = `
     <h1 class="page-title">Тренировки</h1>
+
+    <div class="stat-row" style="margin-bottom:10px;">
+      <div class="stat-tile">
+        <div class="stat-value">${recentSets.length}</div>
+        <div class="stat-label">серии / 7 дни</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${new Set(recentSets.map((s) => s.exerciseId)).size}</div>
+        <div class="stat-label">упражнения</div>
+      </div>
+    </div>
+
+    ${recentSets.length ? `<div class="card" style="margin-bottom:16px;">${distributionBar(groupCounts)}</div>` : ''}
 
     ${MUSCLE_GROUPS.map((g) => `
       <div class="section-heading" style="display:flex;align-items:center;gap:8px;">
@@ -31,6 +53,26 @@ export async function renderExercises(root) {
   });
 
   root.querySelector('#add-ex-fab').onclick = () => openAddExercise(root);
+}
+
+function shiftDate(iso, delta) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function distributionBar(groupCounts) {
+  const total = Object.values(groupCounts).reduce((s, n) => s + n, 0) || 1;
+  const active = MUSCLE_GROUPS.filter((g) => groupCounts[g.id]);
+  const segments = active.map((g) => `<div style="width:${((groupCounts[g.id] / total) * 100).toFixed(1)}%;background:${g.color};height:100%;"></div>`).join('');
+  const legend = active.map((g) => `
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);">
+      <span style="width:7px;height:7px;border-radius:50%;background:${g.color};display:inline-block;"></span>${g.label}
+    </div>`).join('');
+  return `
+    <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--surface-strong);">${segments}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">${legend}</div>`;
 }
 
 function exerciseRow(e) {
@@ -81,9 +123,9 @@ function sparkline(points) {
     return [x, y];
   });
   const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' ');
-  const dots = coords.map((c) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#d31c2b"></circle>`).join('');
+  const dots = coords.map((c) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#dc2430"></circle>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:100px;display:block;">
-    <path d="${path}" fill="none" stroke="#d31c2b" stroke-width="2"></path>
+    <path d="${path}" fill="none" stroke="#dc2430" stroke-width="2"></path>
     ${dots}
   </svg>
   <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-faint);margin-top:4px;">

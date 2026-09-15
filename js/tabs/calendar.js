@@ -1,6 +1,6 @@
-import { DB } from '../db.js';
+import { DB, todayISO } from '../db.js';
 
-const COLOR_SWATCHES = ['#d31c2b', '#9a9d96', '#60a5fa', '#34d399', '#fbbf24', '#a78bfa', '#f472b6', '#22d3ee'];
+const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const MONTH_NAMES = ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'];
 
@@ -19,7 +19,12 @@ export async function renderCalendar(root) {
   const first = new Date(viewYear, viewMonth, 1);
   const startOffset = (first.getDay() + 6) % 7; // Monday-first
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = todayISO();
+
+  const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-`;
+  const monthWorkouts = workouts.filter((w) => w.date.startsWith(monthPrefix));
+  const totalMinutes = monthWorkouts.reduce((sum, w) => sum + durationMinutes(w.startTime, w.endTime), 0);
+  const totalHours = (totalMinutes / 60).toFixed(1).replace(/\.0$/, '');
 
   let cells = '';
   for (let i = 0; i < startOffset; i++) cells += `<div class="cal-cell empty"></div>`;
@@ -54,6 +59,17 @@ export async function renderCalendar(root) {
       <button class="btn-icon" id="prev-month">${chevron('left')}</button>
       <div style="text-align:center;flex:3;font-size:15px;">${MONTH_NAMES[viewMonth]} ${viewYear}</div>
       <button class="btn-icon" id="next-month">${chevron('right')}</button>
+    </div>
+
+    <div class="stat-row" style="margin-bottom:16px;">
+      <div class="stat-tile">
+        <div class="stat-value">${monthWorkouts.length}</div>
+        <div class="stat-label">тренировки</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${totalHours}ч</div>
+        <div class="stat-label">общо време</div>
+      </div>
     </div>
 
     <div class="cal-grid" style="margin-bottom:8px;">
@@ -274,6 +290,15 @@ function exercisePickRow(e, i) {
     <span style="font-size:14px;">${escapeHtml(e.name)}</span>
     ${chevron('right')}
   </div>`;
+}
+
+function durationMinutes(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;
+  return mins;
 }
 
 function fmtIso(iso) {

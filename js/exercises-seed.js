@@ -3,7 +3,7 @@ export const MUSCLE_GROUPS = [
   { id: 'back', label: 'Гръб', color: '#60a5fa' },
   { id: 'legs', label: 'Крака', color: '#34d399' },
   { id: 'shoulders', label: 'Рамене', color: '#fbbf24' },
-  { id: 'arms', label: 'Ръце', color: '#a78bfa' },
+  { id: 'arms', label: 'Ръце', color: '#14b8a6' },
   { id: 'core', label: 'Корем', color: '#f472b6' },
   { id: 'cardio', label: 'Кардио', color: '#22d3ee' },
 ];
