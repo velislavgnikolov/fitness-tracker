@@ -19,9 +19,11 @@ export async function renderExercises(root) {
 
   const volumeByGroup = {};
   let grandTotalVolume = 0;
+  let grandTotalReps = 0;
   allSets.forEach((s) => {
     const vol = (s.reps || 0) * (s.weight || 0);
     grandTotalVolume += vol;
+    grandTotalReps += s.reps || 0;
     const ex = exerciseById[s.exerciseId];
     if (ex) volumeByGroup[ex.muscleGroup] = (volumeByGroup[ex.muscleGroup] || 0) + vol;
   });
@@ -41,6 +43,10 @@ export async function renderExercises(root) {
       <div class="stat-tile">
         <div class="stat-value">${fmtVolume(grandTotalVolume)}</div>
         <div class="stat-label">общо вдигнати кг</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${fmtVolume(grandTotalReps)}</div>
+        <div class="stat-label">общо повторения</div>
       </div>
     </div>
 
@@ -115,6 +121,7 @@ async function openExerciseHistory(root, exerciseId, name) {
   const points = Object.entries(maxByDate);
   const totalVolume = sets.reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
   const maxWeight = sets.length ? Math.max(...sets.map((s) => s.weight || 0)) : 0;
+  const totalReps = sets.reduce((sum, s) => sum + (s.reps || 0), 0);
 
   modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -132,6 +139,10 @@ async function openExerciseHistory(root, exerciseId, name) {
         <div class="stat-tile">
           <div class="stat-value">${sets.length}</div>
           <div class="stat-label">серии общо</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">${fmtVolume(totalReps)}</div>
+          <div class="stat-label">общо повторения</div>
         </div>
       </div>` : ''}
     ${points.length ? `<div class="card" style="margin-bottom:14px;">${sparkline(points)}</div>` : ''}
