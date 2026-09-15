@@ -205,42 +205,57 @@ function openAddFoodModal(root) {
   let searchResults = [];
   let localMatches = [];
   let currentQuery = '';
+  let showAllLocal = false;
+  let onlineSearchFailed = false;
+  let onlineSearchEmpty = false;
 
   function close() { modalRoot.innerHTML = ''; }
 
   async function runLocalSearch(q) {
     const all = await DB.getAll('foods');
-    localMatches = q ? all.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())) : all.slice(-10).reverse();
+    localMatches = q ? all.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())).reverse() : all.slice().reverse();
+    showAllLocal = false;
     renderResults();
   }
 
   async function runOnlineSearch(q) {
     const btn = modalRoot.querySelector('#online-search-btn');
-    if (btn) btn.textContent = 'Търсене...';
+    if (btn) { btn.textContent = 'Търсене...'; btn.disabled = true; }
+    onlineSearchFailed = false;
+    onlineSearchEmpty = false;
     try {
       searchResults = await searchOpenFoodFacts(q);
+      if (searchResults.length === 0) onlineSearchEmpty = true;
     } catch (e) {
       searchResults = [];
+      onlineSearchFailed = true;
     }
-    if (btn) btn.textContent = 'Търси онлайн (Open Food Facts)';
+    if (btn) { btn.textContent = 'Търси онлайн (Open Food Facts)'; btn.disabled = false; }
     renderResults();
   }
 
   function renderResults() {
     const area = modalRoot.querySelector('#results-area');
     if (!area) return;
+    const visibleLocal = showAllLocal ? localMatches : localMatches.slice(0, 3);
+    const hiddenCount = localMatches.length - visibleLocal.length;
     area.innerHTML = `
       ${localMatches.length ? `<div class="section-heading">Моите храни</div>` : ''}
-      ${localMatches.map((f, i) => foodResultRow(f, 'local', i)).join('')}
+      ${visibleLocal.map((f, i) => foodResultRow(f, 'local', i)).join('')}
+      ${hiddenCount > 0 ? `<button class="btn btn-ghost btn-block" id="show-all-local-btn" style="margin-top:8px;font-size:13px;padding:9px;">Покажи всички (${localMatches.length})</button>` : ''}
       ${searchResults.length ? `<div class="section-heading">Резултати онлайн</div>` : ''}
       ${searchResults.map((f, i) => foodResultRow(f, 'online', i)).join('')}
+      ${onlineSearchFailed ? `<p style="color:var(--text-faint);font-size:13px;text-align:center;margin:10px 0 0;">Няма връзка в момента. Провери интернета и опитай пак.</p>` : ''}
+      ${onlineSearchEmpty ? `<p style="color:var(--text-faint);font-size:13px;text-align:center;margin:10px 0 0;">Нищо не e намерено. Пробвай с друга дума или добави ръчно.</p>` : ''}
     `;
+    const showAllBtn = area.querySelector('#show-all-local-btn');
+    if (showAllBtn) showAllBtn.onclick = () => { showAllLocal = true; renderResults(); };
     area.querySelectorAll('[data-pick-food]').forEach((el) => {
       el.onclick = async () => {
         const idx = Number(el.dataset.pickFood);
         const kind = el.dataset.kind;
         if (kind === 'local') {
-          selectedFood = localMatches[idx];
+          selectedFood = visibleLocal[idx];
         } else {
           const f = searchResults[idx];
           const id = await DB.add('foods', f);
@@ -267,6 +282,9 @@ function openAddFoodModal(root) {
     input.setSelectionRange(pos, pos);
     input.oninput = () => {
       currentQuery = input.value;
+      searchResults = [];
+      onlineSearchFailed = false;
+      onlineSearchEmpty = false;
       runLocalSearch(currentQuery.trim());
     };
     modalRoot.querySelector('#online-search-btn').onclick = () => {

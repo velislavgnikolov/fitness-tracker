@@ -50,29 +50,11 @@ document.addEventListener('touchend', (e) => {
 }, { passive: false });
 
 // Lock background scroll/movement while any bottom sheet is open, so dragging
-// to dismiss it can't also scroll or bounce the page underneath.
-let scrollLockY = 0;
-function lockBodyScroll() {
-  scrollLockY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${scrollLockY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-}
-function unlockBodyScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  window.scrollTo(0, scrollLockY);
-}
+// to dismiss it can't also scroll the page underneath. `body` is the app's
+// actual scroll container (html never scrolls), so this just freezes it.
 new MutationObserver(() => {
   const hasModal = !!document.querySelector('.modal-overlay');
-  if (hasModal && document.body.style.position !== 'fixed') {
-    lockBodyScroll();
-  } else if (!hasModal && document.body.style.position === 'fixed') {
-    unlockBodyScroll();
-  }
+  document.body.style.overflowY = hasModal ? 'hidden' : '';
 }).observe(document.body, { childList: true, subtree: true });
 
 async function init() {
