@@ -1,6 +1,8 @@
-import { DB, todayISO, fmtDateHuman, toISODateLocal } from '../db.js';
+import { DB, todayISO, fmtDateHuman, toISODateLocal, parseDecimal } from '../db.js';
 import { searchOpenFoodFacts } from '../food-api.js';
 import { openRemindersManager } from '../reminders.js';
+import { openThemeSettings, paletteIcon } from '../theme-ui.js';
+import { armSheetSwipe } from '../sheet.js';
 
 let currentDate = todayISO();
 
@@ -23,7 +25,10 @@ export async function renderNutrition(root) {
   root.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <h1 class="page-title" style="margin:0;">Храна</h1>
-      <button class="icon-btn" id="reminder-btn" title="Напомняне">${bellIcon()}</button>
+      <div style="display:flex;gap:6px;">
+        <button class="icon-btn" id="theme-btn" title="Персонализация">${paletteIcon()}</button>
+        <button class="icon-btn" id="reminder-btn" title="Напомняне">${bellIcon()}</button>
+      </div>
     </div>
 
     <div class="row" style="align-items:center;margin-bottom:14px;">
@@ -80,6 +85,7 @@ export async function renderNutrition(root) {
   root.querySelector('#edit-goals').onclick = () => openGoalsModal(root);
   root.querySelector('#add-food-fab').onclick = () => openAddFoodModal(root);
   root.querySelector('#reminder-btn').onclick = () => openRemindersManager();
+  root.querySelector('#theme-btn').onclick = () => openThemeSettings();
 
   root.querySelectorAll('[data-delete-log]').forEach((btn) => {
     btn.onclick = async () => {
@@ -269,6 +275,7 @@ function openAddFoodModal(root) {
     };
     modalRoot.querySelector('#manual-add-btn').onclick = () => { step = 'manual'; draw(); };
     modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
+    armSheetSwipe(modalRoot, close);
     renderResults();
   }
 
@@ -287,12 +294,12 @@ function openAddFoodModal(root) {
           </select>
         </div>
         <div class="row">
-          <div class="field"><label>Калории</label><input type="number" id="m-kcal" inputmode="decimal"></div>
-          <div class="field"><label>Протеин (g)</label><input type="number" id="m-protein" inputmode="decimal"></div>
+          <div class="field"><label>Калории</label><input type="text" id="m-kcal" inputmode="decimal"></div>
+          <div class="field"><label>Протеин (g)</label><input type="text" id="m-protein" inputmode="decimal"></div>
         </div>
         <div class="row">
-          <div class="field"><label>Въглехидрати (g)</label><input type="number" id="m-carbs" inputmode="decimal"></div>
-          <div class="field"><label>Мазнини (g)</label><input type="number" id="m-fat" inputmode="decimal"></div>
+          <div class="field"><label>Въглехидрати (g)</label><input type="text" id="m-carbs" inputmode="decimal"></div>
+          <div class="field"><label>Мазнини (g)</label><input type="text" id="m-fat" inputmode="decimal"></div>
         </div>
         <button class="btn btn-primary btn-block" id="save-manual">Запази и продължи</button>
       `);
@@ -302,10 +309,10 @@ function openAddFoodModal(root) {
         const food = {
           name,
           unit: modalRoot.querySelector('#m-unit').value,
-          kcal100: Number(modalRoot.querySelector('#m-kcal').value) || 0,
-          protein100: Number(modalRoot.querySelector('#m-protein').value) || 0,
-          carbs100: Number(modalRoot.querySelector('#m-carbs').value) || 0,
-          fat100: Number(modalRoot.querySelector('#m-fat').value) || 0,
+          kcal100: parseDecimal(modalRoot.querySelector('#m-kcal').value),
+          protein100: parseDecimal(modalRoot.querySelector('#m-protein').value),
+          carbs100: parseDecimal(modalRoot.querySelector('#m-carbs').value),
+          fat100: parseDecimal(modalRoot.querySelector('#m-fat').value),
           source: 'custom',
         };
         const id = await DB.add('foods', food);
@@ -313,6 +320,8 @@ function openAddFoodModal(root) {
         step = 'quantity';
         draw();
       };
+      modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
+      armSheetSwipe(modalRoot, close);
     } else if (step === 'quantity') {
       const unitLabel = selectedFood.unit === 'serving' ? 'Брой порции' : 'Грамове';
       modalRoot.innerHTML = sheetWrap(`
@@ -320,7 +329,7 @@ function openAddFoodModal(root) {
         <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? 'На 1 порция' : 'На 100г'}: ${selectedFood.kcal100} kcal · Б${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
         <div class="field">
           <label>${unitLabel}</label>
-          <input type="number" id="qty-input" inputmode="decimal" value="${selectedFood.unit === 'serving' ? '1' : '100'}">
+          <input type="text" id="qty-input" inputmode="decimal" value="${selectedFood.unit === 'serving' ? '1' : '100'}">
         </div>
         <div class="card" id="qty-preview" style="margin-bottom:16px;"></div>
         <button class="btn btn-primary btn-block" id="confirm-add">Добави в дневника</button>
@@ -328,7 +337,7 @@ function openAddFoodModal(root) {
       const qtyInput = modalRoot.querySelector('#qty-input');
       const preview = modalRoot.querySelector('#qty-preview');
       function updatePreview() {
-        const qty = Number(qtyInput.value) || 0;
+        const qty = parseDecimal(qtyInput.value);
         const factor = selectedFood.unit === 'serving' ? qty : qty / 100;
         preview.innerHTML = `${Math.round(selectedFood.kcal100 * factor)} kcal · Б${round1(selectedFood.protein100 * factor)} В${round1(selectedFood.carbs100 * factor)} М${round1(selectedFood.fat100 * factor)}`;
       }
@@ -336,7 +345,7 @@ function openAddFoodModal(root) {
       updatePreview();
 
       modalRoot.querySelector('#confirm-add').onclick = async () => {
-        const qty = Number(qtyInput.value) || 0;
+        const qty = parseDecimal(qtyInput.value);
         const factor = selectedFood.unit === 'serving' ? qty : qty / 100;
         await DB.add('foodLog', {
           date: currentDate,
@@ -351,6 +360,8 @@ function openAddFoodModal(root) {
         close();
         renderNutrition(root);
       };
+      modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
+      armSheetSwipe(modalRoot, close);
     }
   }
 
@@ -392,6 +403,7 @@ async function openGoalsModal(root) {
     <button class="btn btn-primary btn-block" id="save-goals">Запази</button>
   `);
   modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
+  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
   modalRoot.querySelector('#save-goals').onclick = async () => {
     await DB.put('settings', {
       id: 'goals',

@@ -1,4 +1,4 @@
-import { DB, todayISO } from '../db.js';
+import { DB, todayISO, parseDecimal } from '../db.js';
 
 const RANGES = [
   { id: '30', label: '30д', days: 30 },
@@ -41,7 +41,7 @@ export async function renderWeight(root) {
     <div class="field" style="margin-bottom:18px;">
       <label>Тегло днес (кг)</label>
       <div class="row">
-        <input type="number" step="0.1" inputmode="decimal" id="weight-input" value="${todayEntry ? todayEntry.weightKg : ''}" placeholder="напр. 78.4">
+        <input type="text" inputmode="decimal" id="weight-input" value="${todayEntry ? todayEntry.weightKg : ''}" placeholder="напр. 78.4">
         <button class="btn btn-primary" id="save-weight" style="flex:0 0 auto;">Запази</button>
       </div>
     </div>
@@ -63,7 +63,7 @@ export async function renderWeight(root) {
   });
 
   root.querySelector('#save-weight').onclick = async () => {
-    const val = Number(root.querySelector('#weight-input').value);
+    const val = parseDecimal(root.querySelector('#weight-input').value);
     if (!val) return;
     const date = todayISO();
     if (todayEntry) {
@@ -137,14 +137,14 @@ function weightChart(entries) {
     <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block;">
       <defs>
         <linearGradient id="wfill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#dc2430" stop-opacity="0.35"></stop>
-          <stop offset="100%" stop-color="#dc2430" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"></stop>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"></stop>
         </linearGradient>
       </defs>
       ${gridLines}
       <path d="${areaPath}" fill="url(#wfill)"></path>
-      <path d="${trendPath}" fill="none" stroke="#c0c6c8" stroke-width="1.6" stroke-dasharray="4 3"></path>
-      <path d="${linePath}" fill="none" stroke="#dc2430" stroke-width="2.2"></path>
+      <path d="${trendPath}" fill="none" stroke="var(--silver)" stroke-width="1.6" stroke-dasharray="4 3"></path>
+      <path d="${linePath}" fill="none" stroke="var(--accent)" stroke-width="2.2"></path>
       ${xy.length <= 60 ? xy.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="#f2f1ed"></circle>`).join('') : ''}
     </svg>`;
 }

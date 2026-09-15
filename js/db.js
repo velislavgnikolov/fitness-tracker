@@ -91,6 +91,11 @@ export const DB = {
   },
 };
 
+export function parseDecimal(str) {
+  const n = parseFloat(String(str).trim().replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function toISODateLocal(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

@@ -1,3 +1,4 @@
+import { armSheetSwipe } from './sheet.js';
 import { DB } from './db.js';
 
 const timers = new Map();
@@ -127,6 +128,7 @@ export async function openRemindersManager() {
     </div></div>`;
 
     overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
+    armSheetSwipe(overlay, close);
     overlay.querySelector('#add-reminder-btn').onclick = () => drawForm(null);
 
     overlay.querySelectorAll('[data-toggle-reminder]').forEach((el) => {
@@ -211,6 +213,7 @@ export async function openRemindersManager() {
 
     function bindForm() {
       overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
+    armSheetSwipe(overlay, close);
       overlay.querySelector('#cancel-reminder-btn').onclick = () => drawList();
       overlay.querySelector('#mode-fixed').onclick = () => { mode = 'fixed'; refreshModeUI(); };
       overlay.querySelector('#mode-range').onclick = () => { mode = 'range'; refreshModeUI(); };

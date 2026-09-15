@@ -1,4 +1,5 @@
-import { DB, todayISO } from '../db.js';
+import { DB, todayISO, parseDecimal } from '../db.js';
+import { armSheetSwipe } from '../sheet.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -12,6 +13,29 @@ let viewYear, viewMonth;
 }
 
 export async function renderCalendar(root) {
+  root.innerHTML = `
+    <style>
+      .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+      .cal-weekday { text-align:center; font-size:11px; color:var(--text-faint); padding-bottom:6px; }
+      .cal-cell { aspect-ratio:1; border-radius:12px; background:var(--surface); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; position:relative; }
+      .cal-cell.empty { background:none; border:none; cursor:default; }
+      .cal-cell.today { border-color:var(--accent); }
+      .cal-daynum { font-size:13px; color:var(--text); }
+      .cal-dots { display:flex; gap:2px; }
+      .cal-dot { width:5px; height:5px; border-radius:50%; }
+    </style>
+    <h1 class="page-title">Календар</h1>
+    <div id="calendar-shell"></div>
+    <div id="modal-root"></div>
+  `;
+  await refreshCalendarShell(root);
+}
+
+// Refreshes only the month grid + stats, leaving any open modal (a sibling node) untouched.
+async function refreshCalendarShell(root) {
+  const shell = root.querySelector('#calendar-shell');
+  if (!shell) return;
+
   const workouts = await DB.getAll('workouts');
   const byDate = {};
   workouts.forEach((w) => { (byDate[w.date] ||= []).push(w); });
@@ -41,20 +65,7 @@ export async function renderCalendar(root) {
       </div>`;
   }
 
-  root.innerHTML = `
-    <style>
-      .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-      .cal-weekday { text-align:center; font-size:11px; color:var(--text-faint); padding-bottom:6px; }
-      .cal-cell { aspect-ratio:1; border-radius:12px; background:var(--surface); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; position:relative; }
-      .cal-cell.empty { background:none; border:none; cursor:default; }
-      .cal-cell.today { border-color:var(--accent); }
-      .cal-daynum { font-size:13px; color:var(--text); }
-      .cal-dots { display:flex; gap:2px; }
-      .cal-dot { width:5px; height:5px; border-radius:50%; }
-    </style>
-
-    <h1 class="page-title">Календар</h1>
-
+  shell.innerHTML = `
     <div class="row" style="align-items:center;margin-bottom:14px;">
       <button class="btn-icon" id="prev-month">${chevron('left')}</button>
       <div style="text-align:center;flex:3;font-size:15px;">${MONTH_NAMES[viewMonth]} ${viewYear}</div>
@@ -76,13 +87,11 @@ export async function renderCalendar(root) {
       ${WEEKDAYS.map((w) => `<div class="cal-weekday">${w}</div>`).join('')}
     </div>
     <div class="cal-grid">${cells}</div>
-
-    <div id="modal-root"></div>
   `;
 
-  root.querySelector('#prev-month').onclick = () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } renderCalendar(root); };
-  root.querySelector('#next-month').onclick = () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } renderCalendar(root); };
-  root.querySelectorAll('[data-day]').forEach((cell) => {
+  shell.querySelector('#prev-month').onclick = () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } refreshCalendarShell(root); };
+  shell.querySelector('#next-month').onclick = () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } refreshCalendarShell(root); };
+  shell.querySelectorAll('[data-day]').forEach((cell) => {
     cell.onclick = () => openDayModal(root, cell.dataset.day);
   });
 }
@@ -113,6 +122,7 @@ async function openDayModal(root, iso) {
     </div></div>`;
 
     modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
+    armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
     modalRoot.querySelector('#add-workout-btn').onclick = () => openWorkoutForm(null);
 
     modalRoot.querySelectorAll('[data-edit-workout]').forEach((btn) => {
@@ -128,6 +138,7 @@ async function openDayModal(root, iso) {
         for (const s of sets) await DB.delete('workoutSets', s.id);
         await DB.delete('workouts', id);
         draw();
+        refreshCalendarShell(root);
       };
     });
     modalRoot.querySelectorAll('[data-add-exercise]').forEach((btn) => {
@@ -170,6 +181,7 @@ async function openDayModal(root, iso) {
       };
     });
     modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
+    armSheetSwipe(modalRoot, draw);
     const cancelBtn = modalRoot.querySelector('#cancel-form');
     if (cancelBtn) cancelBtn.onclick = () => draw();
 
@@ -183,7 +195,7 @@ async function openDayModal(root, iso) {
         await DB.add('workouts', { date: iso, label, startTime, endTime, color: selectedColor });
       }
       draw();
-      renderCalendar(root);
+      refreshCalendarShell(root);
     };
   }
 
@@ -197,6 +209,7 @@ async function openDayModal(root, iso) {
     </div></div>`;
 
     modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
+    armSheetSwipe(modalRoot, draw);
     const filterInput = modalRoot.querySelector('#ex-filter');
     filterInput.oninput = () => {
       const q = filterInput.value.toLowerCase();
@@ -222,8 +235,8 @@ async function openDayModal(root, iso) {
         <div id="sets-rows">
           ${setsDraft.map((s, i) => `
             <div class="row" style="margin-bottom:8px;align-items:center;">
-              <div class="field" style="margin-bottom:0;"><input type="number" inputmode="decimal" placeholder="Повторения" data-set-reps="${i}" value="${s.reps}"></div>
-              <div class="field" style="margin-bottom:0;"><input type="number" inputmode="decimal" placeholder="Кг" data-set-weight="${i}" value="${s.weight}"></div>
+              <div class="field" style="margin-bottom:0;"><input type="text" inputmode="decimal" placeholder="Повторения" data-set-reps="${i}" value="${s.reps}"></div>
+              <div class="field" style="margin-bottom:0;"><input type="text" inputmode="decimal" placeholder="Кг" data-set-weight="${i}" value="${s.weight}"></div>
             </div>`).join('')}
         </div>
         <button class="btn btn-ghost btn-block" id="add-set-row" style="margin:8px 0 14px;">+ Серия</button>
@@ -231,6 +244,7 @@ async function openDayModal(root, iso) {
       </div></div>`;
 
       modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
+      armSheetSwipe(modalRoot, draw);
       modalRoot.querySelectorAll('[data-set-reps]').forEach((inp) => inp.oninput = () => setsDraft[Number(inp.dataset.setReps)].reps = inp.value);
       modalRoot.querySelectorAll('[data-set-weight]').forEach((inp) => inp.oninput = () => setsDraft[Number(inp.dataset.setWeight)].weight = inp.value);
       modalRoot.querySelector('#add-set-row').onclick = () => { setsDraft.push({ reps: '', weight: '' }); drawForm(); };
@@ -241,8 +255,8 @@ async function openDayModal(root, iso) {
             workoutId,
             exerciseId: exercise.id,
             exerciseName: exercise.name,
-            reps: Number(s.reps) || 0,
-            weight: Number(s.weight) || 0,
+            reps: parseDecimal(s.reps),
+            weight: parseDecimal(s.weight),
             date: iso,
           });
         }

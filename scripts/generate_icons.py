@@ -24,18 +24,18 @@ def make_icon(size):
         b = int(NARDO_DARK[2] + (NARDO[2] - NARDO_DARK[2]) * (1 - t) * 0.5)
         draw.rectangle([0, size - i, size, size - i + 1], fill=(r, g, b))
 
-    # red diagonal glow accent bottom-right
+    # centered radial glow (symmetric, no directional bias)
     glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
     gd.ellipse(
-        [size * 0.45, size * 0.45, size * 1.15, size * 1.15],
-        fill=(RED[0], RED[1], RED[2], 90),
+        [size * 0.10, size * 0.10, size * 0.90, size * 0.90],
+        fill=(RED[0], RED[1], RED[2], 70),
     )
-    glow = glow.filter(__import__("PIL.ImageFilter", fromlist=["ImageFilter"]).GaussianBlur(size * 0.12))
+    glow = glow.filter(__import__("PIL.ImageFilter", fromlist=["ImageFilter"]).GaussianBlur(size * 0.14))
     img = Image.alpha_composite(img.convert("RGBA"), glow)
     draw = ImageDraw.Draw(img)
 
-    # dumbbell mark: bar + two plates each side, centered, white
+    # dumbbell mark: bar + two plates each side, perfectly mirrored, centered, white
     cx, cy = size / 2, size / 2
     bar_h = size * 0.075
     bar_w = size * 0.46
@@ -48,10 +48,16 @@ def make_icon(size):
     plate_w = size * 0.09
     plate_h_outer = size * 0.34
     plate_h_inner = size * 0.24
+    near = plate_w * 0.15   # edge of outer plate closest to center
+    far = plate_w * 1.15    # edge of outer plate furthest from center
     for side in (-1, 1):
         px = cx + side * (bar_w / 2)
+        if side < 0:
+            left_edge, right_edge = px - far, px + near
+        else:
+            left_edge, right_edge = px - near, px + far
         draw.rounded_rectangle(
-            [px - plate_w * 1.15, cy - plate_h_outer / 2, px + plate_w * 0.15, cy + plate_h_outer / 2],
+            [left_edge, cy - plate_h_outer / 2, right_edge, cy + plate_h_outer / 2],
             radius=plate_w * 0.4,
             fill=WHITE,
         )

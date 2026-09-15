@@ -1,5 +1,6 @@
 import { DB, todayISO } from '../db.js';
 import { MUSCLE_GROUPS } from '../exercises-seed.js';
+import { armSheetSwipe } from '../sheet.js';
 
 export async function renderExercises(root) {
   const [exercises, allSets] = await Promise.all([DB.getAll('exercises'), DB.getAll('workoutSets')]);
@@ -16,6 +17,15 @@ export async function renderExercises(root) {
     if (ex) groupCounts[ex.muscleGroup] = (groupCounts[ex.muscleGroup] || 0) + 1;
   });
 
+  const volumeByGroup = {};
+  let grandTotalVolume = 0;
+  allSets.forEach((s) => {
+    const vol = (s.reps || 0) * (s.weight || 0);
+    grandTotalVolume += vol;
+    const ex = exerciseById[s.exerciseId];
+    if (ex) volumeByGroup[ex.muscleGroup] = (volumeByGroup[ex.muscleGroup] || 0) + vol;
+  });
+
   root.innerHTML = `
     <h1 class="page-title">Тренировки</h1>
 
@@ -28,14 +38,21 @@ export async function renderExercises(root) {
         <div class="stat-value">${new Set(recentSets.map((s) => s.exerciseId)).size}</div>
         <div class="stat-label">упражнения</div>
       </div>
+      <div class="stat-tile">
+        <div class="stat-value">${fmtVolume(grandTotalVolume)}</div>
+        <div class="stat-label">общо вдигнати кг</div>
+      </div>
     </div>
 
     ${recentSets.length ? `<div class="card" style="margin-bottom:16px;">${distributionBar(groupCounts)}</div>` : ''}
 
     ${MUSCLE_GROUPS.map((g) => `
-      <div class="section-heading" style="display:flex;align-items:center;gap:8px;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block;"></span>
-        ${g.label}
+      <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block;"></span>
+          ${g.label}
+        </span>
+        ${volumeByGroup[g.id] ? `<span style="text-transform:none;letter-spacing:0;font-size:11.5px;">${fmtVolume(volumeByGroup[g.id])} кг общо</span>` : ''}
       </div>
       <div class="card">
         ${(byGroup[g.id] || []).length
@@ -96,10 +113,27 @@ async function openExerciseHistory(root, exerciseId, name) {
   const maxByDate = {};
   sets.forEach((s) => { maxByDate[s.date] = Math.max(maxByDate[s.date] || 0, s.weight); });
   const points = Object.entries(maxByDate);
+  const totalVolume = sets.reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
+  const maxWeight = sets.length ? Math.max(...sets.map((s) => s.weight || 0)) : 0;
 
   modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
     <div class="modal-handle"></div>
     <h3 style="margin-bottom:14px;">${escapeHtml(name)}</h3>
+    ${sets.length ? `
+      <div class="stat-row" style="margin-bottom:14px;">
+        <div class="stat-tile">
+          <div class="stat-value">${fmtVolume(totalVolume)}</div>
+          <div class="stat-label">общо вдигнати кг</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">${maxWeight}</div>
+          <div class="stat-label">макс. кг</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-value">${sets.length}</div>
+          <div class="stat-label">серии общо</div>
+        </div>
+      </div>` : ''}
     ${points.length ? `<div class="card" style="margin-bottom:14px;">${sparkline(points)}</div>` : ''}
     ${sets.length
       ? `<div class="card">${sets.slice().reverse().slice(0, 30).map((s) => `
@@ -109,6 +143,7 @@ async function openExerciseHistory(root, exerciseId, name) {
   </div></div>`;
 
   modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
+  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
 }
 
 function sparkline(points) {
@@ -123,9 +158,9 @@ function sparkline(points) {
     return [x, y];
   });
   const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' ');
-  const dots = coords.map((c) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#dc2430"></circle>`).join('');
+  const dots = coords.map((c) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="var(--accent)"></circle>`).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:100px;display:block;">
-    <path d="${path}" fill="none" stroke="#dc2430" stroke-width="2"></path>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2"></path>
     ${dots}
   </svg>
   <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-faint);margin-top:4px;">
@@ -147,6 +182,7 @@ function openAddExercise(root) {
   </div></div>`;
 
   modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
+  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
   modalRoot.querySelector('#save-new-ex').onclick = async () => {
     const name = modalRoot.querySelector('#new-ex-name').value.trim();
     if (!name) return;
@@ -155,6 +191,10 @@ function openAddExercise(root) {
     modalRoot.innerHTML = '';
     renderExercises(root);
   };
+}
+
+function fmtVolume(n) {
+  return Math.round(n).toLocaleString('bg-BG');
 }
 
 function fmtShort(iso) {

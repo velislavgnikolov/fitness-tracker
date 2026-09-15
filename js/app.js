@@ -5,6 +5,7 @@ import { renderCalendar } from './tabs/calendar.js';
 import { renderExercises } from './tabs/exercises.js';
 import { renderWeight } from './tabs/weight.js';
 import { initReminders } from './reminders.js';
+import { loadTheme } from './theme.js';
 
 const root = document.getElementById('view-root');
 
@@ -37,6 +38,7 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 });
 
 async function init() {
+  await loadTheme();
   await seedExercisesIfEmpty();
 
   if ('serviceWorker' in navigator) {
