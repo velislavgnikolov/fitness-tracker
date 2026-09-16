@@ -21,6 +21,9 @@ export async function renderNutrition(root) {
   const streak = computeStreak(allLogs, todayIso);
   const last7 = computeLast7(allLogs, todayIso);
   const avg7 = Math.round(last7.reduce((s, d) => s + d.kcal, 0) / 7);
+  const avg7Protein = Math.round(last7.reduce((s, d) => s + d.protein, 0) / 7);
+  const avg7Carbs = Math.round(last7.reduce((s, d) => s + d.carbs, 0) / 7);
+  const avg7Fat = Math.round(last7.reduce((s, d) => s + d.fat, 0) / 7);
   const kcalPct = pct(totals.kcal, goals.kcalGoal);
   const remaining = goals.kcalGoal - totals.kcal;
 
@@ -69,6 +72,21 @@ export async function renderNutrition(root) {
       <div class="stat-tile">
         <div class="stat-value">${logs.length}</div>
         <div class="stat-label">записа днес</div>
+      </div>
+    </div>
+
+    <div class="stat-row" style="margin-top:10px;">
+      <div class="stat-tile">
+        <div class="stat-value">${avg7Protein}г</div>
+        <div class="stat-label">протеин / ден (7д)</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${avg7Carbs}г</div>
+        <div class="stat-label">въглехидрати / ден (7д)</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${avg7Fat}г</div>
+        <div class="stat-label">мазнини / ден (7д)</div>
       </div>
     </div>
 
@@ -123,8 +141,14 @@ function computeLast7(allLogs, todayIso) {
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const iso = shiftDate(todayIso, -i);
-    const kcal = allLogs.filter((l) => l.date === iso).reduce((s, l) => s + l.kcal, 0);
-    days.push({ date: iso, kcal });
+    const dayLogs = allLogs.filter((l) => l.date === iso);
+    days.push({
+      date: iso,
+      kcal: dayLogs.reduce((s, l) => s + l.kcal, 0),
+      protein: dayLogs.reduce((s, l) => s + l.protein, 0),
+      carbs: dayLogs.reduce((s, l) => s + l.carbs, 0),
+      fat: dayLogs.reduce((s, l) => s + l.fat, 0),
+    });
   }
   return days;
 }
