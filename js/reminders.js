@@ -1,5 +1,6 @@
 import { armSheetSwipe } from './sheet.js';
 import { DB } from './db.js';
+import { syncRemindersToServer } from './push.js';
 
 const timers = new Map();
 
@@ -30,12 +31,14 @@ export async function saveReminder(reminder) {
   } else {
     unscheduleReminder(reminder.id);
   }
+  syncRemindersToServer();
   return reminder;
 }
 
 export async function deleteReminder(id) {
   unscheduleReminder(id);
   await DB.delete('reminders', id);
+  syncRemindersToServer();
 }
 
 function computeFireMinutes(reminder) {
@@ -104,6 +107,7 @@ export async function initReminders() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const all = await getAllReminders();
   all.filter((r) => r.enabled).forEach(scheduleReminder);
+  syncRemindersToServer();
 }
 
 // ---------- UI: reminders manager (self-contained overlay) ----------

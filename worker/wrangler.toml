@@ -1,0 +1,10 @@
+name = "fitness-reminders"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "SUBS"
+id = "744dfaa774144c5f92c09aa61495c9ad"

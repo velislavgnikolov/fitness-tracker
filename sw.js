@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-tracker-v11';
+const CACHE_NAME = 'fitness-tracker-v12';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS = [
   './js/theme-ui.js',
   './js/todo-ui.js',
   './js/sheet.js',
+  './js/push.js',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -52,6 +53,22 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
       return cached || network;
+    })
+  );
+});
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'Напомняне', body: '' };
+  try {
+    if (event.data) data = event.data.json();
+  } catch (e) {
+    // ignore malformed payloads
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Напомняне', {
+      body: data.body || '',
+      icon: 'icons/icon-192.png',
+      tag: 'push-' + Date.now(),
     })
   );
 });
