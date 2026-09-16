@@ -162,7 +162,7 @@ function logRow(l) {
     <div class="list-row">
       <div>
         <div style="font-size:14.5px;">${escapeHtml(l.foodName)}</div>
-        <div style="font-size:12px;color:var(--text-faint);">${l.qtyLabel} · ${Math.round(l.kcal)} kcal · Б${Math.round(l.protein)} В${Math.round(l.carbs)} М${Math.round(l.fat)}</div>
+        <div style="font-size:12px;color:var(--text-faint);">${l.qtyLabel} · ${Math.round(l.kcal)} kcal · П${Math.round(l.protein)} В${Math.round(l.carbs)} М${Math.round(l.fat)}</div>
       </div>
       <button class="icon-btn" data-delete-log="${l.id}">${trashIcon()}</button>
     </div>`;
