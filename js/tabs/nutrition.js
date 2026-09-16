@@ -3,6 +3,7 @@ import { searchOpenFoodFacts } from '../food-api.js';
 import { openRemindersManager } from '../reminders.js';
 import { openThemeSettings, paletteIcon } from '../theme-ui.js';
 import { openTodoList, todoIcon } from '../todo-ui.js';
+import { openBackupPanel, backupIcon } from '../backup-ui.js';
 import { renderSheet } from '../sheet.js';
 
 let currentDate = todayISO();
@@ -30,6 +31,7 @@ export async function renderNutrition(root) {
         <button class="icon-btn" id="theme-btn" title="Персонализация">${paletteIcon()}</button>
         <button class="icon-btn" id="reminder-btn" title="Напомняне">${bellIcon()}</button>
         <button class="icon-btn" id="todo-btn" title="Задачи">${todoIcon()}</button>
+        <button class="icon-btn" id="backup-btn" title="Резервно копие">${backupIcon()}</button>
       </div>
     </div>
 
@@ -89,6 +91,7 @@ export async function renderNutrition(root) {
   root.querySelector('#reminder-btn').onclick = () => openRemindersManager();
   root.querySelector('#theme-btn').onclick = () => openThemeSettings();
   root.querySelector('#todo-btn').onclick = () => openTodoList();
+  root.querySelector('#backup-btn').onclick = () => openBackupPanel();
 
   root.querySelectorAll('[data-delete-log]').forEach((btn) => {
     btn.onclick = async () => {

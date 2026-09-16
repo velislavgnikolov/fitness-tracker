@@ -44,6 +44,28 @@ export default {
       return json({ ok: true });
     }
 
+    if (url.pathname === '/backup' && request.method === 'POST') {
+      const body = await request.json().catch(() => null);
+      if (!body || !body.backupId || !body.data) {
+        return json({ error: 'bad request' }, 400);
+      }
+      const payload = JSON.stringify({ data: body.data, savedAt: new Date().toISOString() });
+      if (payload.length > 24 * 1024 * 1024) {
+        return json({ error: 'payload too large' }, 413);
+      }
+      await env.SUBS.put(`backup:${body.backupId}`, payload);
+      return json({ ok: true });
+    }
+
+    if (url.pathname === '/backup' && request.method === 'GET') {
+      const backupId = url.searchParams.get('backupId');
+      if (!backupId) return json({ error: 'missing backupId' }, 400);
+      const raw = await env.SUBS.get(`backup:${backupId}`);
+      if (!raw) return json({ found: false });
+      const record = JSON.parse(raw);
+      return json({ found: true, data: record.data, savedAt: record.savedAt });
+    }
+
     return new Response('Fitness reminders push worker', { status: 200, headers: CORS_HEADERS });
   },
 

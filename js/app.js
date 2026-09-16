@@ -6,6 +6,7 @@ import { renderExercises } from './tabs/exercises.js';
 import { renderWeight } from './tabs/weight.js';
 import { initReminders } from './reminders.js';
 import { loadTheme } from './theme.js';
+import { autoRestoreIfEmpty, scheduleBackup } from './backup.js';
 
 const root = document.getElementById('view-root');
 
@@ -59,7 +60,10 @@ new MutationObserver(() => {
 
 async function init() {
   await loadTheme();
+  await autoRestoreIfEmpty();
   await seedExercisesIfEmpty();
+
+  window.addEventListener('db-write', scheduleBackup);
 
   if ('serviceWorker' in navigator) {
     try {

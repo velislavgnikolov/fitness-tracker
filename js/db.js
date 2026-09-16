@@ -63,14 +63,22 @@ function wrap(request) {
   });
 }
 
+function notifyWrite() {
+  window.dispatchEvent(new Event('db-write'));
+}
+
 export const DB = {
   async add(storeName, value) {
     const store = await tx(storeName, 'readwrite');
-    return wrap(store.add(value));
+    const result = await wrap(store.add(value));
+    notifyWrite();
+    return result;
   },
   async put(storeName, value) {
     const store = await tx(storeName, 'readwrite');
-    return wrap(store.put(value));
+    const result = await wrap(store.put(value));
+    notifyWrite();
+    return result;
   },
   async get(storeName, id) {
     const store = await tx(storeName);
@@ -86,11 +94,15 @@ export const DB = {
   },
   async delete(storeName, id) {
     const store = await tx(storeName, 'readwrite');
-    return wrap(store.delete(id));
+    const result = await wrap(store.delete(id));
+    notifyWrite();
+    return result;
   },
   async clearStore(storeName) {
     const store = await tx(storeName, 'readwrite');
-    return wrap(store.clear());
+    const result = await wrap(store.clear());
+    notifyWrite();
+    return result;
   },
 };
 

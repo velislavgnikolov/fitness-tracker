@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-tracker-v13';
+const CACHE_NAME = 'fitness-tracker-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -18,6 +18,8 @@ const ASSETS = [
   './js/todo-ui.js',
   './js/sheet.js',
   './js/push.js',
+  './js/backup.js',
+  './js/backup-ui.js',
   './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
