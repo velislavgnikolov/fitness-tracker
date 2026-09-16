@@ -1,11 +1,7 @@
 import { DB } from './db.js';
 
-// Fixed backup identity: this is a single-user personal app, and the id must
-// survive a full local wipe (deleting the home-screen icon clears
-// localStorage too), so it can't be generated/stored on-device like the push
-// client id is. A constant works fine for one user.
-const BACKUP_ID = 'velislav-fitness-primary';
 const WORKER_URL = 'https://fitness-reminders.velislav-fitness.workers.dev';
+const CODE_KEY = 'backup-code';
 
 const STORE_NAMES = [
   'foods', 'foodLog', 'exercises', 'workouts', 'workoutSets',
@@ -13,6 +9,33 @@ const STORE_NAMES = [
 ];
 
 let backupTimer = null;
+
+// Every device/browser gets its OWN backup code, generated on first use and
+// kept in localStorage - so two different people opening the same link each
+// get a private, empty profile and their own cloud backup, never someone
+// else's data. The code is also shown to the user so they can save it
+// externally: on iOS, deleting the home-screen icon wipes localStorage too,
+// so this is the only thing that survives a real reinstall - restoring after
+// that requires typing the saved code back in (see restoreWithCode).
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid mixups
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return `${s.slice(0, 4)}-${s.slice(4)}`;
+}
+
+export function getBackupCode() {
+  let code = localStorage.getItem(CODE_KEY);
+  if (!code) {
+    code = generateCode();
+    localStorage.setItem(CODE_KEY, code);
+  }
+  return code;
+}
+
+export function hasLocalBackupCode() {
+  return !!localStorage.getItem(CODE_KEY);
+}
 
 export function scheduleBackup() {
   clearTimeout(backupTimer);
@@ -51,7 +74,7 @@ export async function backupNow() {
     await fetch(`${WORKER_URL}/backup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ backupId: BACKUP_ID, data }),
+      body: JSON.stringify({ backupId: getBackupCode(), data }),
     });
     localStorage.setItem('last-backup-at', new Date().toISOString());
     return true;
@@ -61,9 +84,9 @@ export async function backupNow() {
   }
 }
 
-export async function fetchCloudBackup() {
+export async function fetchCloudBackupForCode(code) {
   try {
-    const res = await fetch(`${WORKER_URL}/backup?backupId=${encodeURIComponent(BACKUP_ID)}`);
+    const res = await fetch(`${WORKER_URL}/backup?backupId=${encodeURIComponent(code)}`);
     const body = await res.json();
     return body.found ? body : null;
   } catch (e) {
@@ -72,20 +95,33 @@ export async function fetchCloudBackup() {
   }
 }
 
-export async function restoreFromCloud() {
-  const backup = await fetchCloudBackup();
+export function fetchOwnCloudBackup() {
+  return fetchCloudBackupForCode(getBackupCode());
+}
+
+// Restore using a code the user typed in (e.g. one they saved before
+// reinstalling). On success, this device adopts that code as its own, so
+// future automatic backups keep updating the same restored profile.
+export async function restoreWithCode(code) {
+  const normalized = code.trim().toUpperCase();
+  const backup = await fetchCloudBackupForCode(normalized);
   if (!backup) return false;
   await importAllData(backup.data);
+  localStorage.setItem(CODE_KEY, normalized);
   return true;
 }
 
-// If the local database looks freshly wiped (e.g. after deleting and
-// re-adding the home-screen icon), pull down the last cloud backup
-// automatically - there is nothing local to lose by doing so.
+// Only safe to run silently: this device already has its own saved code
+// (so we're not about to hand a stranger someone else's data) but its local
+// IndexedDB is empty - e.g. site data got cleared while the code survived.
 export async function autoRestoreIfEmpty() {
+  if (!hasLocalBackupCode()) return false;
   const empty = await isLocalDataEmpty();
   if (!empty) return false;
-  return restoreFromCloud();
+  const backup = await fetchOwnCloudBackup();
+  if (!backup) return false;
+  await importAllData(backup.data);
+  return true;
 }
 
 export function lastBackupAt() {

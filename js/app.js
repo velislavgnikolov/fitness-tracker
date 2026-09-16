@@ -59,11 +59,11 @@ new MutationObserver(() => {
 }).observe(document.body, { childList: true, subtree: true });
 
 async function init() {
+  window.addEventListener('db-write', scheduleBackup);
+
   await loadTheme();
   await autoRestoreIfEmpty();
   await seedExercisesIfEmpty();
-
-  window.addEventListener('db-write', scheduleBackup);
 
   if ('serviceWorker' in navigator) {
     try {
