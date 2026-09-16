@@ -1,4 +1,4 @@
-import { armSheetSwipe } from './sheet.js';
+import { renderSheet } from './sheet.js';
 import { DB } from './db.js';
 import { syncRemindersToServer } from './push.js';
 
@@ -122,17 +122,15 @@ export async function openRemindersManager() {
 
   async function drawList() {
     const reminders = await getAllReminders();
-    overlay.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(overlay, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">Напомняния</h3>
       ${reminders.length
         ? reminders.map(reminderRow).join('')
         : `<div class="empty-state">Все още няма напомняния.</div>`}
       <button class="btn btn-primary btn-block" id="add-reminder-btn" style="margin-top:12px;">+ Ново напомняне</button>
-    </div></div>`;
+    `, close);
 
-    overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(overlay, close);
     overlay.querySelector('#add-reminder-btn').onclick = () => drawForm(null);
 
     overlay.querySelectorAll('[data-toggle-reminder]').forEach((el) => {
@@ -166,7 +164,7 @@ export async function openRemindersManager() {
     let mode = existing?.mode || 'fixed';
 
     function formHtml() {
-      return `<div class="modal-overlay"><div class="modal-sheet">
+      return `
         <div class="modal-handle"></div>
         <h3 style="margin-bottom:14px;">${isEdit ? 'Редакция' : 'Ново'} напомняне</h3>
 
@@ -195,7 +193,7 @@ export async function openRemindersManager() {
         <button class="btn btn-primary btn-block" id="save-reminder-btn" style="margin-top:8px;">Запази</button>
         ${isEdit ? `<button class="btn btn-ghost btn-block" id="delete-reminder-btn" style="margin-top:8px;color:var(--danger);">Изтрий напомнянето</button>` : ''}
         <button class="btn btn-ghost btn-block" id="cancel-reminder-btn" style="margin-top:8px;">Назад</button>
-      </div></div>`;
+      `;
     }
 
     function modeFieldsHtml() {
@@ -211,13 +209,11 @@ export async function openRemindersManager() {
       `;
     }
 
-    overlay.innerHTML = formHtml();
+    renderSheet(overlay, formHtml(), close);
     overlay.querySelector('#mode-fields').innerHTML = modeFieldsHtml();
     bindForm();
 
     function bindForm() {
-      overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(overlay, close);
       overlay.querySelector('#cancel-reminder-btn').onclick = () => drawList();
       overlay.querySelector('#mode-fixed').onclick = () => { mode = 'fixed'; refreshModeUI(); };
       overlay.querySelector('#mode-range').onclick = () => { mode = 'range'; refreshModeUI(); };

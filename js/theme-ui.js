@@ -1,4 +1,4 @@
-import { armSheetSwipe } from './sheet.js';
+import { renderSheet } from './sheet.js';
 import { getCurrentTheme, saveTheme, resetTheme, DEFAULT_THEME } from './theme.js';
 
 export async function openThemeSettings() {
@@ -16,7 +16,7 @@ export async function openThemeSettings() {
   }
 
   function draw() {
-    overlay.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(overlay, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:4px;">Персонализация</h3>
       <p style="color:var(--text-faint);font-size:12.5px;margin:0 0 18px;">Избери двата основни цвята на приложението.</p>
@@ -28,10 +28,7 @@ export async function openThemeSettings() {
         <button class="btn btn-ghost" id="reset-theme-btn" style="flex:1;">По подразбиране</button>
         <button class="btn btn-primary" id="save-theme-btn" style="flex:1;">Готово</button>
       </div>
-    </div></div>`;
-
-    overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(overlay, close);
+    `, close);
 
     wireColorField('silver-input', (hex) => { theme.silver = hex; previewLive(); });
     wireColorField('accent-input', (hex) => { theme.accent = hex; previewLive(); });

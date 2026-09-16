@@ -1,5 +1,5 @@
 import { DB } from './db.js';
-import { armSheetSwipe } from './sheet.js';
+import { renderSheet } from './sheet.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 
@@ -21,15 +21,13 @@ export async function openTodoList() {
       return (a.id || 0) - (b.id || 0);
     });
 
-    overlay.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(overlay, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">Задачи</h3>
       ${todos.length ? todos.map(todoRow).join('') : `<div class="empty-state">Все още няма задачи.</div>`}
       <button class="btn btn-primary btn-block" id="add-todo-btn" style="margin-top:12px;">+ Нова задача</button>
-    </div></div>`;
+    `, close);
 
-    overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(overlay, close);
     overlay.querySelector('#add-todo-btn').onclick = () => drawForm(null);
 
     overlay.querySelectorAll('[data-toggle-todo]').forEach((el) => {
@@ -58,7 +56,7 @@ export async function openTodoList() {
     const isEdit = !!existing;
     let selectedColor = existing?.color || COLOR_SWATCHES[0];
 
-    overlay.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(overlay, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">${isEdit ? 'Редакция на задача' : 'Нова задача'}</h3>
       <div class="field">
@@ -74,10 +72,7 @@ export async function openTodoList() {
       <button class="btn btn-primary btn-block" id="save-todo-btn" style="margin-top:8px;">Запази</button>
       ${isEdit ? `<button class="btn btn-ghost btn-block" id="delete-todo-btn" style="margin-top:8px;color:var(--danger);">Изтрий</button>` : ''}
       <button class="btn btn-ghost btn-block" id="cancel-todo-btn" style="margin-top:8px;">Назад</button>
-    </div></div>`;
-
-    overlay.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(overlay, close);
+    `, close);
 
     overlay.querySelectorAll('.swatch-pick').forEach((b) => {
       b.onclick = () => {

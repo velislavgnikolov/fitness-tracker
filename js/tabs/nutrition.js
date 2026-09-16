@@ -3,7 +3,7 @@ import { searchOpenFoodFacts } from '../food-api.js';
 import { openRemindersManager } from '../reminders.js';
 import { openThemeSettings, paletteIcon } from '../theme-ui.js';
 import { openTodoList, todoIcon } from '../todo-ui.js';
-import { armSheetSwipe } from '../sheet.js';
+import { renderSheet } from '../sheet.js';
 
 let currentDate = todayISO();
 
@@ -271,14 +271,15 @@ function openAddFoodModal(root) {
   }
 
   function drawSearchShell() {
-    modalRoot.innerHTML = sheetWrap(`
+    renderSheet(modalRoot, `
+      <div class="modal-handle"></div>
       <div class="field">
         <input type="text" id="food-search" placeholder="Търси храна..." autocomplete="off" value="${escapeHtml(currentQuery)}">
       </div>
       <button class="btn btn-ghost btn-block" id="online-search-btn" style="margin-bottom:14px;">Търси онлайн (Open Food Facts)</button>
       <button class="btn btn-ghost btn-block" id="manual-add-btn" style="margin-bottom:14px;">Ръчно въвеждане на храна</button>
       <div id="results-area"></div>
-    `);
+    `, close);
     const input = modalRoot.querySelector('#food-search');
     input.focus();
     const pos = currentQuery.length;
@@ -295,8 +296,6 @@ function openAddFoodModal(root) {
       if (q) runOnlineSearch(q);
     };
     modalRoot.querySelector('#manual-add-btn').onclick = () => { step = 'manual'; draw(); };
-    modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-    armSheetSwipe(modalRoot, close);
     renderResults();
   }
 
@@ -304,14 +303,15 @@ function openAddFoodModal(root) {
     if (step === 'search') {
       drawSearchShell();
     } else if (step === 'manual') {
-      modalRoot.innerHTML = sheetWrap(`
+      renderSheet(modalRoot, `
+        <div class="modal-handle"></div>
         <h3 style="margin-bottom:14px;">Нова храна</h3>
         <div class="field"><label>Име</label><input type="text" id="m-name"></div>
         <div class="field">
           <label>Мерна единица</label>
           <select id="m-unit">
             <option value="g">На 100 грама</option>
-            <option value="serving">За 1 порция</option>
+            <option value="serving" selected>За 1 порция</option>
           </select>
         </div>
         <div class="row">
@@ -323,7 +323,7 @@ function openAddFoodModal(root) {
           <div class="field"><label>Мазнини (g)</label><input type="text" id="m-fat" inputmode="decimal"></div>
         </div>
         <button class="btn btn-primary btn-block" id="save-manual">Запази и продължи</button>
-      `);
+      `, close);
       modalRoot.querySelector('#save-manual').onclick = async () => {
         const name = modalRoot.querySelector('#m-name').value.trim();
         if (!name) return;
@@ -341,11 +341,10 @@ function openAddFoodModal(root) {
         step = 'quantity';
         draw();
       };
-      modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-      armSheetSwipe(modalRoot, close);
     } else if (step === 'quantity') {
       const unitLabel = selectedFood.unit === 'serving' ? 'Брой порции' : 'Грамове';
-      modalRoot.innerHTML = sheetWrap(`
+      renderSheet(modalRoot, `
+        <div class="modal-handle"></div>
         <h3 style="margin-bottom:6px;">${escapeHtml(selectedFood.name)}</h3>
         <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? 'На 1 порция' : 'На 100г'}: ${selectedFood.kcal100} kcal · П${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
         <div class="field">
@@ -354,7 +353,7 @@ function openAddFoodModal(root) {
         </div>
         <div class="card" id="qty-preview" style="margin-bottom:16px;"></div>
         <button class="btn btn-primary btn-block" id="confirm-add">Добави в дневника</button>
-      `);
+      `, close);
       const qtyInput = modalRoot.querySelector('#qty-input');
       const preview = modalRoot.querySelector('#qty-preview');
       function updatePreview() {
@@ -381,8 +380,6 @@ function openAddFoodModal(root) {
         close();
         renderNutrition(root);
       };
-      modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) close(); };
-      armSheetSwipe(modalRoot, close);
     }
   }
 
@@ -402,10 +399,6 @@ function foodResultRow(f, kind, idx) {
     </div>`;
 }
 
-function sheetWrap(inner) {
-  return `<div class="modal-overlay"><div class="modal-sheet"><div class="modal-handle"></div>${inner}</div></div>`;
-}
-
 function round1(n) { return Math.round(n * 10) / 10; }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -413,7 +406,8 @@ function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'
 async function openGoalsModal(root) {
   const modalRoot = root.querySelector('#modal-root');
   const goals = await getGoals();
-  modalRoot.innerHTML = sheetWrap(`
+  renderSheet(modalRoot, `
+    <div class="modal-handle"></div>
     <h3 style="margin-bottom:14px;">Дневни цели</h3>
     <div class="field"><label>Калории</label><input type="number" id="g-kcal" value="${goals.kcalGoal}"></div>
     <div class="row">
@@ -422,9 +416,7 @@ async function openGoalsModal(root) {
     </div>
     <div class="field"><label>Мазнини (g)</label><input type="number" id="g-fat" value="${goals.fatGoal}"></div>
     <button class="btn btn-primary btn-block" id="save-goals">Запази</button>
-  `);
-  modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
-  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
+  `, () => { modalRoot.innerHTML = ''; });
   modalRoot.querySelector('#save-goals').onclick = async () => {
     await DB.put('settings', {
       id: 'goals',

@@ -1,5 +1,5 @@
 import { DB, todayISO, parseDecimal } from '../db.js';
-import { armSheetSwipe } from '../sheet.js';
+import { renderSheet } from '../sheet.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -112,17 +112,15 @@ async function openDayModal(root, iso) {
       setsPerWorkout[w.id] = await DB.getAllByIndex('workoutSets', 'workoutId', w.id);
     }
 
-    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(modalRoot, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">${fmtIso(iso)}</h3>
 
       ${workouts.map((w) => workoutBlock(w, setsPerWorkout[w.id] || [], exById)).join('') || `<div class="empty-state">Няма тренировка за този ден.</div>`}
 
       <button class="btn btn-primary btn-block" id="add-workout-btn" style="margin-top:10px;">+ Добави тренировка</button>
-    </div></div>`;
+    `, () => { modalRoot.innerHTML = ''; });
 
-    modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
-    armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
     modalRoot.querySelector('#add-workout-btn').onclick = () => openWorkoutForm(null);
 
     modalRoot.querySelectorAll('[data-edit-workout]').forEach((btn) => {
@@ -154,7 +152,7 @@ async function openDayModal(root, iso) {
 
   function openWorkoutForm(existing) {
     const isEdit = !!existing;
-    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(modalRoot, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">${isEdit ? 'Редакция' : 'Нова'} тренировка</h3>
       <div class="field"><label>От</label><input type="time" id="w-start" value="${existing?.startTime || '18:00'}"></div>
@@ -168,7 +166,7 @@ async function openDayModal(root, iso) {
       </div>
       <button class="btn btn-primary btn-block" id="save-workout" style="margin-top:12px;">Запази</button>
       ${isEdit ? `<button class="btn btn-ghost btn-block" id="cancel-form" style="margin-top:8px;">Отказ</button>` : ''}
-    </div></div>`;
+    `, draw);
 
     let selectedColor = existing?.color || COLOR_SWATCHES[0];
     modalRoot.querySelectorAll('.swatch-pick').forEach((b) => {
@@ -178,8 +176,6 @@ async function openDayModal(root, iso) {
         b.style.border = '2px solid #fff';
       };
     });
-    modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
-    armSheetSwipe(modalRoot, draw);
     const cancelBtn = modalRoot.querySelector('#cancel-form');
     if (cancelBtn) cancelBtn.onclick = () => draw();
 
@@ -199,15 +195,13 @@ async function openDayModal(root, iso) {
 
   async function openExercisePicker(workoutId) {
     const allExercises = await DB.getAll('exercises');
-    modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+    renderSheet(modalRoot, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">Избери упражнение</h3>
       <div class="field"><input type="text" id="ex-filter" placeholder="Търси упражнение..."></div>
       <div id="ex-list">${allExercises.map((e, i) => exercisePickRow(e, i)).join('')}</div>
-    </div></div>`;
+    `, draw);
 
-    modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
-    armSheetSwipe(modalRoot, draw);
     const filterInput = modalRoot.querySelector('#ex-filter');
     filterInput.oninput = () => {
       const q = filterInput.value.toLowerCase();
@@ -227,7 +221,7 @@ async function openDayModal(root, iso) {
   function openSetEntry(workoutId, exercise) {
     let setsDraft = [{ reps: '', weight: '' }];
     function drawForm() {
-      modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+      renderSheet(modalRoot, `
         <div class="modal-handle"></div>
         <h3 style="margin-bottom:14px;">${escapeHtml(exercise.name)}</h3>
         <div id="sets-rows">
@@ -239,10 +233,8 @@ async function openDayModal(root, iso) {
         </div>
         <button class="btn btn-ghost btn-block" id="add-set-row" style="margin:8px 0 14px;">+ Серия</button>
         <button class="btn btn-primary btn-block" id="save-sets">Запази</button>
-      </div></div>`;
+      `, draw);
 
-      modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) draw(); };
-      armSheetSwipe(modalRoot, draw);
       modalRoot.querySelectorAll('[data-set-reps]').forEach((inp) => inp.oninput = () => setsDraft[Number(inp.dataset.setReps)].reps = inp.value);
       modalRoot.querySelectorAll('[data-set-weight]').forEach((inp) => inp.oninput = () => setsDraft[Number(inp.dataset.setWeight)].weight = inp.value);
       modalRoot.querySelector('#add-set-row').onclick = () => { setsDraft.push({ reps: '', weight: '' }); drawForm(); };
