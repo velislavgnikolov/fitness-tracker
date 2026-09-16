@@ -1,5 +1,5 @@
 const DB_NAME = 'fitness-tracker';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise = null;
 
@@ -40,6 +40,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains('reminders')) {
         db.createObjectStore('reminders', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('todos')) {
+        db.createObjectStore('todos', { keyPath: 'id', autoIncrement: true });
       }
     };
 

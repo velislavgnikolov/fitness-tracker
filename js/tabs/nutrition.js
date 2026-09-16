@@ -2,6 +2,7 @@ import { DB, todayISO, fmtDateHuman, toISODateLocal, parseDecimal } from '../db.
 import { searchOpenFoodFacts } from '../food-api.js';
 import { openRemindersManager } from '../reminders.js';
 import { openThemeSettings, paletteIcon } from '../theme-ui.js';
+import { openTodoList, todoIcon } from '../todo-ui.js';
 import { armSheetSwipe } from '../sheet.js';
 
 let currentDate = todayISO();
@@ -28,6 +29,7 @@ export async function renderNutrition(root) {
       <div style="display:flex;gap:6px;">
         <button class="icon-btn" id="theme-btn" title="Персонализация">${paletteIcon()}</button>
         <button class="icon-btn" id="reminder-btn" title="Напомняне">${bellIcon()}</button>
+        <button class="icon-btn" id="todo-btn" title="Задачи">${todoIcon()}</button>
       </div>
     </div>
 
@@ -86,6 +88,7 @@ export async function renderNutrition(root) {
   root.querySelector('#add-food-fab').onclick = () => openAddFoodModal(root);
   root.querySelector('#reminder-btn').onclick = () => openRemindersManager();
   root.querySelector('#theme-btn').onclick = () => openThemeSettings();
+  root.querySelector('#todo-btn').onclick = () => openTodoList();
 
   root.querySelectorAll('[data-delete-log]').forEach((btn) => {
     btn.onclick = async () => {
@@ -344,7 +347,7 @@ function openAddFoodModal(root) {
       const unitLabel = selectedFood.unit === 'serving' ? 'Брой порции' : 'Грамове';
       modalRoot.innerHTML = sheetWrap(`
         <h3 style="margin-bottom:6px;">${escapeHtml(selectedFood.name)}</h3>
-        <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? 'На 1 порция' : 'На 100г'}: ${selectedFood.kcal100} kcal · Б${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
+        <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? 'На 1 порция' : 'На 100г'}: ${selectedFood.kcal100} kcal · П${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
         <div class="field">
           <label>${unitLabel}</label>
           <input type="text" id="qty-input" inputmode="decimal" value="${selectedFood.unit === 'serving' ? '1' : '100'}">
@@ -357,7 +360,7 @@ function openAddFoodModal(root) {
       function updatePreview() {
         const qty = parseDecimal(qtyInput.value);
         const factor = selectedFood.unit === 'serving' ? qty : qty / 100;
-        preview.innerHTML = `${Math.round(selectedFood.kcal100 * factor)} kcal · Б${round1(selectedFood.protein100 * factor)} В${round1(selectedFood.carbs100 * factor)} М${round1(selectedFood.fat100 * factor)}`;
+        preview.innerHTML = `${Math.round(selectedFood.kcal100 * factor)} kcal · П${round1(selectedFood.protein100 * factor)} В${round1(selectedFood.carbs100 * factor)} М${round1(selectedFood.fat100 * factor)}`;
       }
       qtyInput.oninput = updatePreview;
       updatePreview();
@@ -393,7 +396,7 @@ function foodResultRow(f, kind, idx) {
     <div class="list-row" data-pick-food="${idx}" data-kind="${kind}" style="cursor:pointer;">
       <div>
         <div style="font-size:14px;">${escapeHtml(f.name)}</div>
-        <div style="font-size:12px;color:var(--text-faint);">${unitLabel}: ${f.kcal100} kcal · Б${f.protein100} В${f.carbs100} М${f.fat100}${f.brand ? ' · ' + escapeHtml(f.brand) : ''}</div>
+        <div style="font-size:12px;color:var(--text-faint);">${unitLabel}: ${f.kcal100} kcal · П${f.protein100} В${f.carbs100} М${f.fat100}${f.brand ? ' · ' + escapeHtml(f.brand) : ''}</div>
       </div>
       ${chevron('right')}
     </div>`;
