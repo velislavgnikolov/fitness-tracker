@@ -1,3 +1,9 @@
+// Native confirm dialog used before every destructive delete, so a
+// mis-tap on a trash icon never silently loses data.
+export function confirmDelete(message = 'Сигурен ли си, че искаш да изтриеш това?') {
+  return window.confirm(message);
+}
+
 // Renders `innerHtml` into container's bottom sheet, reusing the existing
 // .modal-sheet DOM node if one is already open (so a quick content update -
 // toggling a checkbox, deleting a row - doesn't retrigger the slide-up

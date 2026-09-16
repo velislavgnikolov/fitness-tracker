@@ -1,5 +1,5 @@
 import { DB, todayISO, parseDecimal } from '../db.js';
-import { renderSheet } from '../sheet.js';
+import { renderSheet, confirmDelete } from '../sheet.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -131,6 +131,7 @@ async function openDayModal(root, iso) {
     });
     modalRoot.querySelectorAll('[data-del-workout]').forEach((btn) => {
       btn.onclick = async () => {
+        if (!confirmDelete('Да изтрия ли цялата тренировка с всички серии?')) return;
         const id = Number(btn.dataset.delWorkout);
         const sets = await DB.getAllByIndex('workoutSets', 'workoutId', id);
         for (const s of sets) await DB.delete('workoutSets', s.id);
@@ -144,6 +145,7 @@ async function openDayModal(root, iso) {
     });
     modalRoot.querySelectorAll('[data-del-set]').forEach((btn) => {
       btn.onclick = async () => {
+        if (!confirmDelete('Да изтрия ли тази серия?')) return;
         await DB.delete('workoutSets', Number(btn.dataset.delSet));
         draw();
       };

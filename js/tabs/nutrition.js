@@ -4,7 +4,7 @@ import { openRemindersManager } from '../reminders.js';
 import { openThemeSettings, paletteIcon } from '../theme-ui.js';
 import { openTodoList, todoIcon } from '../todo-ui.js';
 import { openBackupPanel, backupIcon } from '../backup-ui.js';
-import { renderSheet } from '../sheet.js';
+import { renderSheet, confirmDelete } from '../sheet.js';
 
 let currentDate = todayISO();
 
@@ -113,6 +113,7 @@ export async function renderNutrition(root) {
 
   root.querySelectorAll('[data-delete-log]').forEach((btn) => {
     btn.onclick = async () => {
+      if (!confirmDelete('Да изтрия ли този запис?')) return;
       await DB.delete('foodLog', Number(btn.dataset.deleteLog));
       renderNutrition(root);
     };

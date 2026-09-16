@@ -1,4 +1,4 @@
-import { renderSheet } from './sheet.js';
+import { renderSheet, confirmDelete } from './sheet.js';
 import { DB } from './db.js';
 import { syncRemindersToServer } from './push.js';
 
@@ -149,6 +149,7 @@ export async function openRemindersManager() {
     });
     overlay.querySelectorAll('[data-del-reminder]').forEach((el) => {
       el.onclick = async () => {
+        if (!confirmDelete('Да изтрия ли това напомняне?')) return;
         await deleteReminder(Number(el.dataset.delReminder));
         drawList();
       };
@@ -219,7 +220,11 @@ export async function openRemindersManager() {
       overlay.querySelector('#mode-range').onclick = () => { mode = 'range'; refreshModeUI(); };
 
       const delBtn = overlay.querySelector('#delete-reminder-btn');
-      if (delBtn) delBtn.onclick = async () => { await deleteReminder(existing.id); drawList(); };
+      if (delBtn) delBtn.onclick = async () => {
+        if (!confirmDelete('Да изтрия ли това напомняне?')) return;
+        await deleteReminder(existing.id);
+        drawList();
+      };
 
       overlay.querySelector('#save-reminder-btn').onclick = async () => {
         const text = overlay.querySelector('#rem-text').value.trim();

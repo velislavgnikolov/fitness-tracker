@@ -1,5 +1,5 @@
 import { DB } from './db.js';
-import { renderSheet } from './sheet.js';
+import { renderSheet, confirmDelete } from './sheet.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 
@@ -46,6 +46,7 @@ export async function openTodoList() {
     overlay.querySelectorAll('[data-del-todo]').forEach((el) => {
       el.onclick = async (ev) => {
         ev.stopPropagation();
+        if (!confirmDelete('Да изтрия ли тази задача?')) return;
         await DB.delete('todos', Number(el.dataset.delTodo));
         drawList();
       };
@@ -85,7 +86,11 @@ export async function openTodoList() {
     overlay.querySelector('#cancel-todo-btn').onclick = () => drawList();
 
     const delBtn = overlay.querySelector('#delete-todo-btn');
-    if (delBtn) delBtn.onclick = async () => { await DB.delete('todos', existing.id); drawList(); };
+    if (delBtn) delBtn.onclick = async () => {
+      if (!confirmDelete('Да изтрия ли тази задача?')) return;
+      await DB.delete('todos', existing.id);
+      drawList();
+    };
 
     overlay.querySelector('#save-todo-btn').onclick = async () => {
       const text = overlay.querySelector('#todo-text').value.trim();
