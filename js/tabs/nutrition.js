@@ -118,6 +118,46 @@ export async function renderNutrition(root) {
       renderNutrition(root);
     };
   });
+
+  root.querySelectorAll('[data-edit-log]').forEach((btn) => {
+    btn.onclick = () => {
+      const entry = logs.find((l) => l.id === Number(btn.dataset.editLog));
+      openEditLogModal(root, entry);
+    };
+  });
+}
+
+function openEditLogModal(root, entry) {
+  const modalRoot = root.querySelector('#modal-root');
+  function close() { modalRoot.innerHTML = ''; }
+
+  renderSheet(modalRoot, `
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:14px;">${escapeHtml(entry.foodName)}</h3>
+    <div class="field"><label>Количество</label><input type="text" id="e-qty" value="${escapeHtml(entry.qtyLabel)}"></div>
+    <div class="row">
+      <div class="field"><label>Калории</label><input type="text" id="e-kcal" inputmode="decimal" value="${round1(entry.kcal)}"></div>
+      <div class="field"><label>Протеин (g)</label><input type="text" id="e-protein" inputmode="decimal" value="${round1(entry.protein)}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Въглехидрати (g)</label><input type="text" id="e-carbs" inputmode="decimal" value="${round1(entry.carbs)}"></div>
+      <div class="field"><label>Мазнини (g)</label><input type="text" id="e-fat" inputmode="decimal" value="${round1(entry.fat)}"></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="save-edit-log">Запази</button>
+  `, close);
+
+  modalRoot.querySelector('#save-edit-log').onclick = async () => {
+    await DB.put('foodLog', {
+      ...entry,
+      qtyLabel: modalRoot.querySelector('#e-qty').value.trim() || entry.qtyLabel,
+      kcal: parseDecimal(modalRoot.querySelector('#e-kcal').value),
+      protein: parseDecimal(modalRoot.querySelector('#e-protein').value),
+      carbs: parseDecimal(modalRoot.querySelector('#e-carbs').value),
+      fat: parseDecimal(modalRoot.querySelector('#e-fat').value),
+    });
+    close();
+    renderNutrition(root);
+  };
 }
 
 function sumLogs(logs) {
@@ -195,7 +235,10 @@ function logRow(l) {
         <div style="font-size:14.5px;">${escapeHtml(l.foodName)}</div>
         <div style="font-size:12px;color:var(--text-faint);">${l.qtyLabel} · ${Math.round(l.kcal)} kcal · П${Math.round(l.protein)} В${Math.round(l.carbs)} М${Math.round(l.fat)}</div>
       </div>
-      <button class="icon-btn" data-delete-log="${l.id}">${trashIcon()}</button>
+      <div style="display:flex;gap:2px;flex-shrink:0;">
+        <button class="icon-btn" data-edit-log="${l.id}">${editIcon()}</button>
+        <button class="icon-btn" data-delete-log="${l.id}">${trashIcon()}</button>
+      </div>
     </div>`;
 }
 
@@ -465,5 +508,6 @@ function chevron(dir) {
 }
 function plusIcon() { return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`; }
 function trashIcon() { return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>`; }
+function editIcon() { return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`; }
 function gearIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`; }
 function bellIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>`; }
