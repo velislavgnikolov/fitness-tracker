@@ -13,6 +13,33 @@ function json(data, status = 200) {
   });
 }
 
+// A single small key listing every subscribed clientId. Used instead of
+// SUBS.list() so the once-a-minute cron never issues a KV list operation
+// (that quota is only 1,000/day on the free tier - 1,440 cron runs alone
+// would blow through it) and never has to read unrelated backup: blobs.
+const SUB_INDEX_KEY = 'sub-index';
+
+async function getSubIndex(env) {
+  const raw = await env.SUBS.get(SUB_INDEX_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+async function addToSubIndex(env, clientId) {
+  const ids = await getSubIndex(env);
+  if (!ids.includes(clientId)) {
+    ids.push(clientId);
+    await env.SUBS.put(SUB_INDEX_KEY, JSON.stringify(ids));
+  }
+}
+
+async function removeFromSubIndex(env, clientId) {
+  const ids = await getSubIndex(env);
+  const next = ids.filter((id) => id !== clientId);
+  if (next.length !== ids.length) {
+    await env.SUBS.put(SUB_INDEX_KEY, JSON.stringify(next));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -35,12 +62,16 @@ export default {
         lastFired: existing.lastFired || {},
       };
       await env.SUBS.put(body.clientId, JSON.stringify(record));
+      await addToSubIndex(env, body.clientId);
       return json({ ok: true });
     }
 
     if (url.pathname === '/unsubscribe' && request.method === 'POST') {
       const body = await request.json().catch(() => null);
-      if (body && body.clientId) await env.SUBS.delete(body.clientId);
+      if (body && body.clientId) {
+        await env.SUBS.delete(body.clientId);
+        await removeFromSubIndex(env, body.clientId);
+      }
       return json({ ok: true });
     }
 
@@ -76,15 +107,17 @@ export default {
 
 async function runReminders(env) {
   const now = new Date();
-  const list = await env.SUBS.list();
+  const clientIds = await getSubIndex(env);
+  const staleIds = [];
 
-  for (const key of list.keys) {
-    const raw = await env.SUBS.get(key.name);
-    if (!raw) continue;
+  for (const clientId of clientIds) {
+    const raw = await env.SUBS.get(clientId);
+    if (!raw) { staleIds.push(clientId); continue; }
     let record;
     try {
       record = JSON.parse(raw);
     } catch {
+      staleIds.push(clientId);
       continue;
     }
 
@@ -120,8 +153,15 @@ async function runReminders(env) {
     record.lastFired = prunedFired;
 
     if (changed || Object.keys(prunedFired).length !== Object.keys(record.lastFired).length) {
-      await env.SUBS.put(key.name, JSON.stringify(record));
+      await env.SUBS.put(clientId, JSON.stringify(record));
     }
+  }
+
+  // Self-heal: drop any clientId from the index whose record is gone (e.g.
+  // deleted outside the normal /unsubscribe path).
+  if (staleIds.length) {
+    const remaining = clientIds.filter((id) => !staleIds.includes(id));
+    await env.SUBS.put(SUB_INDEX_KEY, JSON.stringify(remaining));
   }
 }
 
