@@ -26,6 +26,18 @@ async function seedExercisesIfEmpty() {
   }
 }
 
+// The old single "Ръце" category was split into "Бицепс"/"Трицепс". Reclassify
+// any exercise still tagged with the removed 'arms' id so it doesn't vanish
+// from the exercises list for people who already seeded their database.
+async function migrateArmsCategory() {
+  const existing = await DB.getAll('exercises');
+  const stale = existing.filter((e) => e.muscleGroup === 'arms');
+  for (const ex of stale) {
+    const isTriceps = /трицепс|френска|успоредка/i.test(ex.name);
+    await DB.put('exercises', { ...ex, muscleGroup: isTriceps ? 'triceps' : 'biceps' });
+  }
+}
+
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -64,6 +76,7 @@ async function init() {
   await loadTheme();
   await autoRestoreIfEmpty();
   await seedExercisesIfEmpty();
+  await migrateArmsCategory();
 
   if ('serviceWorker' in navigator) {
     try {

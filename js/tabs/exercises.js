@@ -1,6 +1,6 @@
 import { DB, todayISO } from '../db.js';
 import { MUSCLE_GROUPS } from '../exercises-seed.js';
-import { armSheetSwipe } from '../sheet.js';
+import { renderSheet, confirmDelete } from '../sheet.js';
 
 export async function renderExercises(root) {
   const [exercises, allSets] = await Promise.all([DB.getAll('exercises'), DB.getAll('workoutSets')]);
@@ -68,6 +68,12 @@ export async function renderExercises(root) {
   root.querySelectorAll('[data-open-ex]').forEach((row) => {
     row.onclick = () => openExerciseHistory(root, Number(row.dataset.openEx), row.dataset.exName);
   });
+  root.querySelectorAll('[data-edit-ex]').forEach((btn) => {
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      openEditExercise(root, Number(btn.dataset.editEx));
+    };
+  });
 
   root.querySelector('#add-ex-fab').onclick = () => openAddExercise(root);
 }
@@ -93,9 +99,9 @@ function distributionBar(groupCounts) {
 }
 
 function exerciseRow(e) {
-  return `<div class="list-row" data-open-ex="${e.id}" data-ex-name="${escapeHtml(e.name)}" style="cursor:pointer;">
-    <span style="font-size:14.5px;">${escapeHtml(e.name)}</span>
-    ${chevron('right')}
+  return `<div class="list-row">
+    <span data-open-ex="${e.id}" data-ex-name="${escapeHtml(e.name)}" style="flex:1;font-size:14.5px;cursor:pointer;">${escapeHtml(e.name)}</span>
+    <button class="icon-btn" data-edit-ex="${e.id}" title="Редактирай">${editIcon()}</button>
   </div>`;
 }
 
@@ -117,7 +123,7 @@ async function openExerciseHistory(root, exerciseId, name) {
   const maxWeight = sets.length ? Math.max(...sets.map((s) => s.weight || 0)) : 0;
   const totalReps = sets.reduce((sum, s) => sum + (s.reps || 0), 0);
 
-  modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+  renderSheet(modalRoot, `
     <div class="modal-handle"></div>
     <h3 style="margin-bottom:14px;">${escapeHtml(name)}</h3>
     ${sets.length ? `
@@ -145,10 +151,7 @@ async function openExerciseHistory(root, exerciseId, name) {
           <div class="list-row"><span style="font-size:13px;color:var(--text-dim);">${fmtShort(s.date)}</span><span>${s.reps} × ${s.weight}кг</span></div>
         `).join('')}</div>`
       : `<div class="empty-state">Все още няма история за това упражнение.</div>`}
-  </div></div>`;
-
-  modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
-  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
+  `, () => { modalRoot.innerHTML = ''; });
 }
 
 function sparkline(points) {
@@ -175,7 +178,9 @@ function sparkline(points) {
 
 function openAddExercise(root) {
   const modalRoot = root.querySelector('#modal-root');
-  modalRoot.innerHTML = `<div class="modal-overlay"><div class="modal-sheet">
+  function close() { modalRoot.innerHTML = ''; }
+
+  renderSheet(modalRoot, `
     <div class="modal-handle"></div>
     <h3 style="margin-bottom:14px;">Ново упражнение</h3>
     <div class="field"><label>Име</label><input type="text" id="new-ex-name"></div>
@@ -184,16 +189,49 @@ function openAddExercise(root) {
       <select id="new-ex-group">${MUSCLE_GROUPS.map((g) => `<option value="${g.id}">${g.label}</option>`).join('')}</select>
     </div>
     <button class="btn btn-primary btn-block" id="save-new-ex">Запази</button>
-  </div></div>`;
+  `, close);
 
-  modalRoot.querySelector('.modal-overlay').onclick = (e) => { if (e.target.classList.contains('modal-overlay')) modalRoot.innerHTML = ''; };
-  armSheetSwipe(modalRoot, () => { modalRoot.innerHTML = ''; });
   modalRoot.querySelector('#save-new-ex').onclick = async () => {
     const name = modalRoot.querySelector('#new-ex-name').value.trim();
     if (!name) return;
     const muscleGroup = modalRoot.querySelector('#new-ex-group').value;
     await DB.add('exercises', { name, muscleGroup, custom: true });
-    modalRoot.innerHTML = '';
+    close();
+    renderExercises(root);
+  };
+}
+
+async function openEditExercise(root, id) {
+  const modalRoot = root.querySelector('#modal-root');
+  const ex = await DB.get('exercises', id);
+  function close() { modalRoot.innerHTML = ''; }
+
+  renderSheet(modalRoot, `
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:14px;">Редакция на упражнение</h3>
+    <div class="field"><label>Име</label><input type="text" id="edit-ex-name" value="${escapeHtml(ex.name)}"></div>
+    <div class="field">
+      <label>Мускулна група</label>
+      <select id="edit-ex-group">${MUSCLE_GROUPS.map((g) => `<option value="${g.id}" ${g.id === ex.muscleGroup ? 'selected' : ''}>${g.label}</option>`).join('')}</select>
+    </div>
+    <button class="btn btn-primary btn-block" id="save-edit-ex" style="margin-bottom:8px;">Запази</button>
+    <button class="btn btn-ghost btn-block" id="delete-ex-btn" style="margin-bottom:8px;color:var(--danger);">Изтрий упражнението</button>
+    <button class="btn btn-ghost btn-block" id="cancel-edit-ex">Отказ</button>
+  `, close);
+
+  modalRoot.querySelector('#cancel-edit-ex').onclick = close;
+  modalRoot.querySelector('#save-edit-ex').onclick = async () => {
+    const name = modalRoot.querySelector('#edit-ex-name').value.trim();
+    if (!name) return;
+    const muscleGroup = modalRoot.querySelector('#edit-ex-group').value;
+    await DB.put('exercises', { ...ex, name, muscleGroup });
+    close();
+    renderExercises(root);
+  };
+  modalRoot.querySelector('#delete-ex-btn').onclick = async () => {
+    if (!confirmDelete('Да изтрия ли това упражнение? Историята от вече записани тренировки с него ще остане.')) return;
+    await DB.delete('exercises', id);
+    close();
     renderExercises(root);
   };
 }
@@ -207,8 +245,5 @@ function fmtShort(iso) {
   return d.toLocaleDateString('bg-BG', { day: 'numeric', month: 'short' });
 }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function chevron(dir) {
-  const d = dir === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6';
-  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"></path></svg>`;
-}
 function plusIcon() { return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>`; }
+function editIcon() { return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>`; }

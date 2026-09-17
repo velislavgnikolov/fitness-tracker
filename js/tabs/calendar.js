@@ -111,6 +111,7 @@ async function openDayModal(root, iso) {
     for (const w of workouts) {
       setsPerWorkout[w.id] = await DB.getAllByIndex('workoutSets', 'workoutId', w.id);
     }
+    const setsById = Object.fromEntries(Object.values(setsPerWorkout).flat().map((s) => [s.id, s]));
 
     renderSheet(modalRoot, `
       <div class="modal-handle"></div>
@@ -150,6 +151,32 @@ async function openDayModal(root, iso) {
         draw();
       };
     });
+    modalRoot.querySelectorAll('[data-edit-set]').forEach((btn) => {
+      btn.onclick = () => openSetEditForm(setsById[Number(btn.dataset.editSet)]);
+    });
+  }
+
+  function openSetEditForm(set) {
+    renderSheet(modalRoot, `
+      <div class="modal-handle"></div>
+      <h3 style="margin-bottom:14px;">${escapeHtml(set.exerciseName)}</h3>
+      <div class="row">
+        <div class="field"><label>Повторения</label><input type="text" inputmode="decimal" id="edit-set-reps" value="${set.reps}"></div>
+        <div class="field"><label>Кг</label><input type="text" inputmode="decimal" id="edit-set-weight" value="${set.weight}"></div>
+      </div>
+      <button class="btn btn-primary btn-block" id="save-set-edit" style="margin-bottom:8px;">Запази</button>
+      <button class="btn btn-ghost btn-block" id="cancel-set-edit">Отказ</button>
+    `, draw);
+
+    modalRoot.querySelector('#cancel-set-edit').onclick = () => draw();
+    modalRoot.querySelector('#save-set-edit').onclick = async () => {
+      await DB.put('workoutSets', {
+        ...set,
+        reps: parseDecimal(modalRoot.querySelector('#edit-set-reps').value),
+        weight: parseDecimal(modalRoot.querySelector('#edit-set-weight').value),
+      });
+      draw();
+    };
   }
 
   function openWorkoutForm(existing) {
@@ -281,9 +308,12 @@ function workoutBlock(w, sets, exById) {
       ${Object.keys(grouped).length ? `<div style="margin-top:10px;">` + Object.entries(grouped).map(([name, list]) => `
         <div style="margin-bottom:8px;">
           <div style="font-size:13px;color:var(--text-dim);margin-bottom:3px;">${escapeHtml(name)}</div>
-          ${list.map((s) => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;">
+          ${list.map((s) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:2px 0;">
             <span>${s.reps} × ${s.weight}кг</span>
-            <button class="icon-btn" data-del-set="${s.id}" style="padding:2px;">${trashIcon()}</button>
+            <span style="display:flex;gap:2px;">
+              <button class="icon-btn" data-edit-set="${s.id}" style="padding:2px;">${editIcon()}</button>
+              <button class="icon-btn" data-del-set="${s.id}" style="padding:2px;">${trashIcon()}</button>
+            </span>
           </div>`).join('')}
         </div>`).join('') + `</div>` : ''}
 

@@ -3,7 +3,8 @@ export const MUSCLE_GROUPS = [
   { id: 'back', label: 'Гръб', color: '#60a5fa' },
   { id: 'legs', label: 'Крака', color: '#34d399' },
   { id: 'shoulders', label: 'Рамене', color: '#fbbf24' },
-  { id: 'arms', label: 'Ръце', color: '#14b8a6' },
+  { id: 'biceps', label: 'Бицепс', color: '#14b8a6' },
+  { id: 'triceps', label: 'Трицепс', color: '#fb923c' },
   { id: 'core', label: 'Корем', color: '#f472b6' },
   { id: 'cardio', label: 'Кардио', color: '#22d3ee' },
 ];
@@ -38,12 +39,12 @@ export const DEFAULT_EXERCISES = [
   { name: 'Обратни разгъвки', muscleGroup: 'shoulders' },
   { name: 'Арнолд преса', muscleGroup: 'shoulders' },
 
-  { name: 'Бицепс с щанга', muscleGroup: 'arms' },
-  { name: 'Бицепс с дъмбели', muscleGroup: 'arms' },
-  { name: 'Чук (Hammer curl)', muscleGroup: 'arms' },
-  { name: 'Трицепс на въже', muscleGroup: 'arms' },
-  { name: 'Френска преса', muscleGroup: 'arms' },
-  { name: 'Успоредка (Dips)', muscleGroup: 'arms' },
+  { name: 'Бицепс с щанга', muscleGroup: 'biceps' },
+  { name: 'Бицепс с дъмбели', muscleGroup: 'biceps' },
+  { name: 'Чук (Hammer curl)', muscleGroup: 'biceps' },
+  { name: 'Трицепс на въже', muscleGroup: 'triceps' },
+  { name: 'Френска преса', muscleGroup: 'triceps' },
+  { name: 'Успоредка (Dips)', muscleGroup: 'triceps' },
 
   { name: 'Коремни преси', muscleGroup: 'core' },
   { name: 'Повдигане на крака', muscleGroup: 'core' },
