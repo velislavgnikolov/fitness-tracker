@@ -7,6 +7,7 @@ export const MUSCLE_GROUPS = [
   { id: 'triceps', label: 'Трицепс', color: '#fb923c' },
   { id: 'core', label: 'Корем', color: '#f472b6' },
   { id: 'cardio', label: 'Кардио', color: '#22d3ee' },
+  { id: 'sport', label: 'Спорт', color: '#a3e635' },
 ];
 
 export const DEFAULT_EXERCISES = [
@@ -55,4 +56,9 @@ export const DEFAULT_EXERCISES = [
   { name: 'Колоездене', muscleGroup: 'cardio' },
   { name: 'Гребен уред', muscleGroup: 'cardio' },
   { name: 'Скачане на въже', muscleGroup: 'cardio' },
+
+  { name: 'Футбол', muscleGroup: 'sport' },
 ];
+
+// Exercises in this category track duration (minutes) instead of reps/weight.
+export const SPORT_GROUP_ID = 'sport';

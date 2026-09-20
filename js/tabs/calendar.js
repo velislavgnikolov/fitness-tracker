@@ -1,5 +1,6 @@
 import { DB, todayISO, parseDecimal } from '../db.js';
 import { renderSheet, confirmDelete } from '../sheet.js';
+import { SPORT_GROUP_ID } from '../exercises-seed.js';
 
 const COLOR_SWATCHES = ['#dc2430', '#c0c6c8', '#60a5fa', '#34d399', '#fbbf24', '#14b8a6', '#f472b6', '#22d3ee'];
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -157,6 +158,26 @@ async function openDayModal(root, iso) {
   }
 
   function openSetEditForm(set) {
+    if (set.duration != null) {
+      renderSheet(modalRoot, `
+        <div class="modal-handle"></div>
+        <h3 style="margin-bottom:14px;">${escapeHtml(set.exerciseName)}</h3>
+        <div class="field"><label>Продължителност (мин)</label><input type="text" inputmode="decimal" id="edit-set-duration" value="${set.duration}"></div>
+        <button class="btn btn-primary btn-block" id="save-set-edit" style="margin-bottom:8px;">Запази</button>
+        <button class="btn btn-ghost btn-block" id="cancel-set-edit">Отказ</button>
+      `, draw);
+
+      modalRoot.querySelector('#cancel-set-edit').onclick = () => draw();
+      modalRoot.querySelector('#save-set-edit').onclick = async () => {
+        await DB.put('workoutSets', {
+          ...set,
+          duration: parseDecimal(modalRoot.querySelector('#edit-set-duration').value),
+        });
+        draw();
+      };
+      return;
+    }
+
     renderSheet(modalRoot, `
       <div class="modal-handle"></div>
       <h3 style="margin-bottom:14px;">${escapeHtml(set.exerciseName)}</h3>
@@ -242,9 +263,32 @@ async function openDayModal(root, iso) {
 
     function bindPickRows(list) {
       modalRoot.querySelectorAll('[data-pick-ex]').forEach((row) => {
-        row.onclick = () => openSetEntry(workoutId, list[Number(row.dataset.pickEx)]);
+        row.onclick = () => {
+          const exercise = list[Number(row.dataset.pickEx)];
+          if (exercise.muscleGroup === SPORT_GROUP_ID) {
+            addSportSet(workoutId, exercise);
+          } else {
+            openSetEntry(workoutId, exercise);
+          }
+        };
       });
     }
+  }
+
+  // Sport-category exercises (e.g. Футбол) don't ask for reps/weight - the
+  // whole workout's duration is logged against the sport directly.
+  async function addSportSet(workoutId, exercise) {
+    const w = await DB.get('workouts', workoutId);
+    await DB.add('workoutSets', {
+      workoutId,
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      reps: null,
+      weight: null,
+      duration: durationMinutes(w.startTime, w.endTime),
+      date: iso,
+    });
+    draw();
   }
 
   function openSetEntry(workoutId, exercise) {
@@ -309,7 +353,7 @@ function workoutBlock(w, sets, exById) {
         <div style="margin-bottom:8px;">
           <div style="font-size:13px;color:var(--text-dim);margin-bottom:3px;">${escapeHtml(name)}</div>
           ${list.map((s) => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:2px 0;">
-            <span>${s.reps} × ${s.weight}кг</span>
+            <span>${s.duration != null ? `${s.duration} мин` : `${s.reps} × ${s.weight}кг`}</span>
             <span style="display:flex;gap:2px;">
               <button class="icon-btn" data-edit-set="${s.id}" style="padding:2px;">${editIcon()}</button>
               <button class="icon-btn" data-del-set="${s.id}" style="padding:2px;">${trashIcon()}</button>

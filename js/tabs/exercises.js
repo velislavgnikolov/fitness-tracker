@@ -1,9 +1,15 @@
 import { DB, todayISO } from '../db.js';
-import { MUSCLE_GROUPS } from '../exercises-seed.js';
+import { MUSCLE_GROUPS, SPORT_GROUP_ID } from '../exercises-seed.js';
 import { renderSheet, confirmDelete } from '../sheet.js';
 
+const SPORT_COLORS = ['#fb923c', '#f472b6', '#22d3ee', '#a3e635', '#facc15', '#60a5fa'];
+
 export async function renderExercises(root) {
-  const [exercises, allSets] = await Promise.all([DB.getAll('exercises'), DB.getAll('workoutSets')]);
+  const [exercises, allSets, workouts] = await Promise.all([
+    DB.getAll('exercises'),
+    DB.getAll('workoutSets'),
+    DB.getAll('workouts'),
+  ]);
   const byGroup = {};
   MUSCLE_GROUPS.forEach((g) => byGroup[g.id] = []);
   exercises.forEach((e) => { (byGroup[e.muscleGroup] ||= []).push(e); });
@@ -26,6 +32,23 @@ export async function renderExercises(root) {
     if (ex) volumeByGroup[ex.muscleGroup] = (volumeByGroup[ex.muscleGroup] || 0) + vol;
   });
 
+  // Time distribution: a workout counts as "Фитнес" unless it has at least
+  // one sport-category exercise logged, in which case its whole duration
+  // goes to that sport instead (each sport tracked separately).
+  const setsByWorkout = {};
+  allSets.forEach((s) => { (setsByWorkout[s.workoutId] ||= []).push(s); });
+  let fitnessMinutes = 0;
+  const sportMinutes = {};
+  workouts.forEach((w) => {
+    const sportSets = (setsByWorkout[w.id] || []).filter((s) => s.duration != null);
+    if (sportSets.length) {
+      sportSets.forEach((s) => { sportMinutes[s.exerciseName] = (sportMinutes[s.exerciseName] || 0) + (s.duration || 0); });
+    } else {
+      fitnessMinutes += durationMinutes(w.startTime, w.endTime);
+    }
+  });
+  const sportEntries = Object.entries(sportMinutes).sort((a, b) => b[1] - a[1]);
+
   root.innerHTML = `
     <h1 class="page-title">Тренировки</h1>
 
@@ -45,6 +68,11 @@ export async function renderExercises(root) {
     </div>
 
     ${recentSets.length ? `<div class="card" style="margin-bottom:16px;">${distributionBar(groupCounts)}</div>` : ''}
+
+    ${(fitnessMinutes || sportEntries.length) ? `
+      <div class="section-heading">Разпределение на времето</div>
+      <div class="card" style="margin-bottom:16px;">${timeDistributionChart(fitnessMinutes, sportEntries)}</div>
+    ` : ''}
 
     ${MUSCLE_GROUPS.map((g) => `
       <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
@@ -98,6 +126,37 @@ function distributionBar(groupCounts) {
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">${legend}</div>`;
 }
 
+function timeDistributionChart(fitnessMinutes, sportEntries) {
+  const segments = [
+    { label: 'Фитнес', minutes: fitnessMinutes, color: 'var(--accent)' },
+    ...sportEntries.map(([name, minutes], i) => ({ label: name, minutes, color: SPORT_COLORS[i % SPORT_COLORS.length] })),
+  ].filter((seg) => seg.minutes > 0);
+  const total = segments.reduce((s, seg) => s + seg.minutes, 0) || 1;
+  const bars = segments.map((seg) => `<div style="width:${((seg.minutes / total) * 100).toFixed(1)}%;background:${seg.color};height:100%;"></div>`).join('');
+  const legend = segments.map((seg) => `
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);">
+      <span style="width:7px;height:7px;border-radius:50%;background:${seg.color};display:inline-block;"></span>${seg.label} · ${fmtHoursMinutes(seg.minutes)}
+    </div>`).join('');
+  return `
+    <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--surface-strong);">${bars}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">${legend}</div>`;
+}
+
+function durationMinutes(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;
+  return mins;
+}
+
+function fmtHoursMinutes(mins) {
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return h === 0 ? `${m}м` : `${h}ч ${m}м`;
+}
+
 function exerciseRow(e) {
   return `<div class="list-row">
     <span data-open-ex="${e.id}" data-ex-name="${escapeHtml(e.name)}" style="flex:1;font-size:14.5px;cursor:pointer;">${escapeHtml(e.name)}</span>
@@ -115,6 +174,37 @@ async function openExerciseHistory(root, exerciseId, name) {
     sets = all.filter((s) => s.exerciseId === exerciseId);
   }
   sets.sort((a, b) => a.date.localeCompare(b.date));
+
+  const ex = await DB.get('exercises', exerciseId);
+  if (ex && ex.muscleGroup === SPORT_GROUP_ID) {
+    const totalMinutes = sets.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const avgMinutes = sets.length ? Math.round(totalMinutes / sets.length) : 0;
+    renderSheet(modalRoot, `
+      <div class="modal-handle"></div>
+      <h3 style="margin-bottom:14px;">${escapeHtml(name)}</h3>
+      ${sets.length ? `
+        <div class="stat-row" style="margin-bottom:14px;">
+          <div class="stat-tile">
+            <div class="stat-value">${fmtHoursMinutes(totalMinutes)}</div>
+            <div class="stat-label">общо време</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">${sets.length}</div>
+            <div class="stat-label">тренировки</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-value">${avgMinutes} мин</div>
+            <div class="stat-label">средно на тренировка</div>
+          </div>
+        </div>` : ''}
+      ${sets.length
+        ? `<div class="card">${sets.slice().reverse().slice(0, 30).map((s) => `
+            <div class="list-row"><span style="font-size:13px;color:var(--text-dim);">${fmtShort(s.date)}</span><span>${s.duration} мин</span></div>
+          `).join('')}</div>`
+        : `<div class="empty-state">Все още няма история за това упражнение.</div>`}
+    `, () => { modalRoot.innerHTML = ''; });
+    return;
+  }
 
   const maxByDate = {};
   sets.forEach((s) => { maxByDate[s.date] = Math.max(maxByDate[s.date] || 0, s.weight); });
