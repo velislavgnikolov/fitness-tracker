@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-tracker-v21';
+const CACHE_NAME = 'fitness-tracker-v22';
 const ASSETS = [
   './',
   './index.html',
@@ -39,23 +39,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first: whenever there's connectivity, always serve the latest
+// deployed code immediately instead of yesterday's cache with a background
+// update that only helps the *next* visit. Cache is just the offline
+// fallback now, so a new version reaches the phone the moment it's opened -
+// no more closing and reopening the app multiple times to pick up a change.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // let food API calls pass through, not cached
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
 
