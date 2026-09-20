@@ -49,7 +49,6 @@ async function refreshCalendarShell(root) {
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-`;
   const monthWorkouts = workouts.filter((w) => w.date.startsWith(monthPrefix));
   const totalMinutes = monthWorkouts.reduce((sum, w) => sum + durationMinutes(w.startTime, w.endTime), 0);
-  const totalHours = (totalMinutes / 60).toFixed(1).replace(/\.0$/, '');
 
   let cells = '';
   for (let i = 0; i < startOffset; i++) cells += `<div class="cal-cell empty"></div>`;
@@ -79,7 +78,7 @@ async function refreshCalendarShell(root) {
         <div class="stat-label">тренировки</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-value">${totalHours}ч</div>
+        <div class="stat-value">${fmtHoursMinutes(totalMinutes)}</div>
         <div class="stat-label">общо време</div>
       </div>
     </div>
@@ -379,6 +378,12 @@ function durationMinutes(start, end) {
   let mins = (eh * 60 + em) - (sh * 60 + sm);
   if (mins < 0) mins += 24 * 60;
   return mins;
+}
+
+function fmtHoursMinutes(mins) {
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return h === 0 ? `${m}м` : `${h}ч ${m}м`;
 }
 
 function fmtIso(iso) {
