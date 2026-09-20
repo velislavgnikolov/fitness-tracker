@@ -3,6 +3,13 @@ import { MUSCLE_GROUPS, SPORT_GROUP_ID } from '../exercises-seed.js';
 import { renderSheet, confirmDelete } from '../sheet.js';
 
 const SPORT_COLORS = ['#fb923c', '#f472b6', '#22d3ee', '#a3e635', '#facc15', '#60a5fa'];
+const TIME_RANGES = [
+  { id: 'week', label: 'Седмица', days: 7 },
+  { id: 'month', label: 'Месец', days: 30 },
+  { id: '90d', label: '90 дни', days: 90 },
+  { id: 'always', label: 'Винаги', days: null },
+];
+let timeRange = 'always';
 
 export async function renderExercises(root) {
   const [exercises, allSets, workouts] = await Promise.all([
@@ -37,9 +44,12 @@ export async function renderExercises(root) {
   // goes to that sport instead (each sport tracked separately).
   const setsByWorkout = {};
   allSets.forEach((s) => { (setsByWorkout[s.workoutId] ||= []).push(s); });
+  const rangeDef = TIME_RANGES.find((r) => r.id === timeRange) || TIME_RANGES[TIME_RANGES.length - 1];
+  const rangeCutoffIso = rangeDef.days != null ? shiftDate(todayISO(), -(rangeDef.days - 1)) : null;
+  const rangeWorkouts = rangeCutoffIso ? workouts.filter((w) => w.date >= rangeCutoffIso) : workouts;
   let fitnessMinutes = 0;
   const sportMinutes = {};
-  workouts.forEach((w) => {
+  rangeWorkouts.forEach((w) => {
     const sportSets = (setsByWorkout[w.id] || []).filter((s) => s.duration != null);
     if (sportSets.length) {
       sportSets.forEach((s) => { sportMinutes[s.exerciseName] = (sportMinutes[s.exerciseName] || 0) + (s.duration || 0); });
@@ -69,9 +79,16 @@ export async function renderExercises(root) {
 
     ${recentSets.length ? `<div class="card" style="margin-bottom:16px;">${distributionBar(groupCounts)}</div>` : ''}
 
-    ${(fitnessMinutes || sportEntries.length) ? `
+    ${workouts.length ? `
       <div class="section-heading">Разпределение на времето</div>
-      <div class="card" style="margin-bottom:16px;">${timeDistributionChart(fitnessMinutes, sportEntries)}</div>
+      <div class="row" style="margin-bottom:8px;">
+        ${TIME_RANGES.map((r) => `<button class="btn ${r.id === timeRange ? 'btn-primary' : 'btn-ghost'}" data-time-range="${r.id}" style="font-size:11.5px;padding:8px 4px;">${r.label}</button>`).join('')}
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        ${(fitnessMinutes || sportEntries.length)
+          ? timeDistributionChart(fitnessMinutes, sportEntries)
+          : `<div class="empty-state" style="padding:8px;">Няма тренировки в този период.</div>`}
+      </div>
     ` : ''}
 
     ${MUSCLE_GROUPS.map((g) => `
@@ -100,6 +117,12 @@ export async function renderExercises(root) {
     btn.onclick = (ev) => {
       ev.stopPropagation();
       openEditExercise(root, Number(btn.dataset.editEx));
+    };
+  });
+  root.querySelectorAll('[data-time-range]').forEach((btn) => {
+    btn.onclick = () => {
+      timeRange = btn.dataset.timeRange;
+      renderExercises(root);
     };
   });
 
