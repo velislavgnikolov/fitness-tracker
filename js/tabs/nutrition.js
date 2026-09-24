@@ -398,6 +398,7 @@ function openAddFoodModal(root) {
   let onlineSearchEmpty = false;
   let barcodeNotFound = false;
   let stopScanner = null;
+  let editingFood = null;
 
   function close() {
     if (stopScanner) { stopScanner(); stopScanner = null; }
@@ -444,6 +445,13 @@ function openAddFoodModal(root) {
     `;
     const showAllBtn = area.querySelector('#show-all-local-btn');
     if (showAllBtn) showAllBtn.onclick = () => { showAllLocal = true; renderResults(); };
+    area.querySelectorAll('[data-edit-food]').forEach((btn) => {
+      btn.onclick = () => {
+        editingFood = visibleLocal[Number(btn.dataset.editFood)];
+        step = 'editFood';
+        draw();
+      };
+    });
     area.querySelectorAll('[data-pick-food]').forEach((el) => {
       el.onclick = async () => {
         const idx = Number(el.dataset.pickFood);
@@ -538,6 +546,47 @@ function openAddFoodModal(root) {
         step = 'quantity';
         draw();
       };
+    } else if (step === 'editFood') {
+      renderSheet(modalRoot, `
+        <div class="modal-handle"></div>
+        <h3 style="margin-bottom:14px;">Редакция на храна</h3>
+        <div class="field"><label>Име</label><input type="text" id="ef-name" value="${escapeHtml(editingFood.name)}"></div>
+        <div class="field">
+          <label>Мерна единица</label>
+          <select id="ef-unit">
+            <option value="g" ${editingFood.unit === 'g' ? 'selected' : ''}>На 100 грама</option>
+            <option value="serving" ${editingFood.unit === 'serving' ? 'selected' : ''}>За 1 порция</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="field"><label>Калории</label><input type="text" id="ef-kcal" inputmode="decimal" value="${editingFood.kcal100}"></div>
+          <div class="field"><label>Протеин (g)</label><input type="text" id="ef-protein" inputmode="decimal" value="${editingFood.protein100}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Въглехидрати (g)</label><input type="text" id="ef-carbs" inputmode="decimal" value="${editingFood.carbs100}"></div>
+          <div class="field"><label>Мазнини (g)</label><input type="text" id="ef-fat" inputmode="decimal" value="${editingFood.fat100}"></div>
+        </div>
+        <button class="btn btn-primary btn-block" id="save-edit-food" style="margin-bottom:8px;">Запази</button>
+        <button class="btn btn-ghost btn-block" id="cancel-edit-food">Отказ</button>
+      `, close);
+
+      modalRoot.querySelector('#cancel-edit-food').onclick = () => { step = 'search'; draw(); };
+      modalRoot.querySelector('#save-edit-food').onclick = async () => {
+        const name = modalRoot.querySelector('#ef-name').value.trim();
+        if (!name) return;
+        await DB.put('foods', {
+          ...editingFood,
+          name,
+          unit: modalRoot.querySelector('#ef-unit').value,
+          kcal100: parseDecimal(modalRoot.querySelector('#ef-kcal').value),
+          protein100: parseDecimal(modalRoot.querySelector('#ef-protein').value),
+          carbs100: parseDecimal(modalRoot.querySelector('#ef-carbs').value),
+          fat100: parseDecimal(modalRoot.querySelector('#ef-fat').value),
+        });
+        step = 'search';
+        draw();
+        runLocalSearch(currentQuery.trim());
+      };
     } else if (step === 'barcode') {
       let cancelledThisStep = false;
 
@@ -627,11 +676,12 @@ function openAddFoodModal(root) {
 function foodResultRow(f, kind, idx) {
   const unitLabel = f.unit === 'serving' ? 'порция' : '100г';
   return `
-    <div class="list-row" data-pick-food="${idx}" data-kind="${kind}" style="cursor:pointer;">
-      <div>
+    <div class="list-row">
+      <div data-pick-food="${idx}" data-kind="${kind}" style="cursor:pointer;flex:1;min-width:0;">
         <div style="font-size:14px;">${escapeHtml(f.name)}</div>
         <div style="font-size:12px;color:var(--text-faint);">${unitLabel}: ${f.kcal100} kcal · П${f.protein100} В${f.carbs100} М${f.fat100}${f.brand ? ' · ' + escapeHtml(f.brand) : ''}</div>
       </div>
+      ${kind === 'local' ? `<button class="icon-btn" data-edit-food="${idx}" style="flex-shrink:0;">${editIcon()}</button>` : ''}
       ${chevron('right')}
     </div>`;
 }
