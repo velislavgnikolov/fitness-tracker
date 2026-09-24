@@ -70,6 +70,18 @@ new MutationObserver(() => {
   document.body.style.overflowY = hasModal ? 'hidden' : '';
 }).observe(document.body, { childList: true, subtree: true });
 
+// iOS keeps allowing touch-driven scroll/bounce of the page behind a modal
+// even with body{overflow-y:hidden} - especially with a focused input and
+// the keyboard open. Belt-and-braces: block any touchmove that isn't inside
+// the open sheet itself, so the background truly can't move while the
+// sheet's own content keeps scrolling exactly as smoothly as before.
+document.addEventListener('touchmove', (e) => {
+  if (!document.querySelector('.modal-overlay')) return;
+  if (!e.target.closest('.modal-sheet')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 // When the on-screen keyboard opens, iOS both shrinks AND pans the visual
 // viewport (to keep the caret visible) without moving the layout viewport
 // that position:fixed elements are anchored to. Only tracking the shrunk
