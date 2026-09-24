@@ -632,7 +632,7 @@ function openAddFoodModal(root) {
       renderSheet(modalRoot, `
         <div class="modal-handle"></div>
         <h3 style="margin-bottom:6px;">${escapeHtml(selectedFood.name)}</h3>
-        <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? 'На 1 порция' : 'На 100г'}: ${selectedFood.kcal100} kcal · П${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
+        <p style="color:var(--text-faint);font-size:13px;margin:0 0 14px;">${selectedFood.unit === 'serving' ? `На 1 порция${selectedFood.servingLabel ? ` (${escapeHtml(selectedFood.servingLabel)})` : ''}` : 'На 100г'}: ${selectedFood.kcal100} kcal · П${selectedFood.protein100} В${selectedFood.carbs100} М${selectedFood.fat100}</p>
         <div class="field">
           <label>${unitLabel}</label>
           <input type="text" id="qty-input" inputmode="decimal" value="${selectedFood.unit === 'serving' ? '1' : '100'}">
