@@ -70,6 +70,27 @@ new MutationObserver(() => {
   document.body.style.overflowY = hasModal ? 'hidden' : '';
 }).observe(document.body, { childList: true, subtree: true });
 
+// When the on-screen keyboard opens, iOS both shrinks AND pans the visual
+// viewport (to keep the caret visible) without moving the layout viewport
+// that position:fixed elements are anchored to. Only tracking the shrunk
+// height (a previous attempt) left the fixed sheet's top-left origin
+// pinned to the now-scrolled-away layout origin - wrong position, not just
+// wrong size, which is what caused the sheet to hide its top and reveal
+// page content in the gap left behind. Tracking both offsetTop and height
+// keeps the sheet glued exactly to whatever part of the page is actually
+// visible, keyboard or not.
+function updateViewportVars() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  document.documentElement.style.setProperty('--app-vh', `${vv.height}px`);
+  document.documentElement.style.setProperty('--app-vh-offset', `${vv.offsetTop}px`);
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateViewportVars);
+  window.visualViewport.addEventListener('scroll', updateViewportVars);
+  updateViewportVars();
+}
+
 async function init() {
   window.addEventListener('db-write', scheduleBackup);
 
