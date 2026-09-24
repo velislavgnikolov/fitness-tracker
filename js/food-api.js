@@ -40,6 +40,29 @@ export async function searchOpenFoodFacts(query) {
   return attempt();
 }
 
+export async function fetchByBarcode(barcode) {
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,nutriments,status`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const p = data.product;
+    if (data.status !== 1 || !p || !p.product_name || !p.nutriments || p.nutriments['energy-kcal_100g'] == null) return null;
+    return {
+      name: p.product_name,
+      brand: p.brands || '',
+      unit: 'g',
+      kcal100: round1(p.nutriments['energy-kcal_100g']),
+      protein100: round1(p.nutriments['proteins_100g'] || 0),
+      carbs100: round1(p.nutriments['carbohydrates_100g'] || 0),
+      fat100: round1(p.nutriments['fat_100g'] || 0),
+      source: 'off',
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 function round1(n) {
   return Math.round(n * 10) / 10;
 }
