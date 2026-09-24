@@ -85,34 +85,6 @@ new MutationObserver(() => {
   }
 }).observe(document.body, { childList: true, subtree: true });
 
-// Extra safety net on top of the lock above: block any touch-drag that
-// isn't inside the open sheet, so nothing behind it can rubber-band/bounce
-// even for a frame. Touches inside .modal-sheet are left alone, so its own
-// content keeps scrolling exactly as smoothly as before.
-document.addEventListener('touchmove', (e) => {
-  if (!document.body.classList.contains('modal-locked')) return;
-  if (!e.target.closest('.modal-sheet')) {
-    e.preventDefault();
-  }
-}, { passive: false });
-
-// .modal-overlay's height now tracks the keyboard natively via 100dvh (see
-// css/style.css), which is far more reliable than computing it in JS. The
-// one thing dvh can't express is *position*: if iOS still pans the visual
-// viewport down a bit to reveal a caret despite focus({preventScroll:true}),
-// a plain top:0 sheet would be sized right but placed too high, again
-// showing a gap of page content below it. This just nudges --app-vh-offset
-// to close that gap - a small safety net, not the primary fix.
-if (window.visualViewport) {
-  const vv = window.visualViewport;
-  const updateViewportOffset = () => {
-    document.documentElement.style.setProperty('--app-vh-offset', `${vv.offsetTop}px`);
-  };
-  vv.addEventListener('resize', updateViewportOffset);
-  vv.addEventListener('scroll', updateViewportOffset);
-  updateViewportOffset();
-}
-
 async function init() {
   window.addEventListener('db-write', scheduleBackup);
 
