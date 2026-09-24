@@ -1,4 +1,5 @@
-import { DB, todayISO, parseDecimal } from '../db.js';
+import { DB, todayISO, parseDecimal, toISODateLocal } from '../db.js';
+import { renderSheet } from '../sheet.js';
 
 const RANGES = [
   { id: '30', label: '30д', days: 30 },
@@ -16,6 +17,8 @@ export async function renderWeight(root) {
 
   const range = RANGES.find((r) => r.id === activeRange);
   const filtered = range.days ? all.slice(-range.days) : all;
+
+  const weeks = groupByWeek(all).sort((a, b) => b.start.localeCompare(a.start));
 
   root.innerHTML = `
     <h1 class="page-title">Тегло</h1>
@@ -38,6 +41,18 @@ export async function renderWeight(root) {
       ${filtered.length >= 2 ? weightChart(filtered) : `<div class="empty-state">Нужни са поне 2 записа за графика.</div>`}
     </div>
 
+    ${weeks.length ? `
+      <div class="section-heading">Средно тегло по седмици</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
+        ${weeks.map((wk) => `
+          <div class="card" data-week-start="${wk.start}" style="padding:10px 6px;text-align:center;cursor:pointer;">
+            <div style="font-size:10.5px;color:var(--text-faint);margin-bottom:4px;">${fmtWeekRange(wk.start, wk.end)}</div>
+            <div style="font-size:16px;font-family:'Space Grotesk',sans-serif;font-weight:600;">${wk.avg.toFixed(1)}</div>
+            <div style="font-size:10px;color:var(--text-faint);">кг</div>
+          </div>`).join('')}
+      </div>
+    ` : ''}
+
     <div class="field" style="margin-bottom:18px;">
       <label>Тегло днес (кг)</label>
       <div class="row">
@@ -49,17 +64,23 @@ export async function renderWeight(root) {
     <div class="section-heading">История</div>
     <div class="card">
       ${all.length
-        ? all.slice().reverse().slice(0, 20).map((e) => `
+        ? all.slice().reverse().slice(0, 7).map((e) => `
           <div class="list-row">
             <span style="font-size:13px;color:var(--text-dim);">${fmtShort(e.date)}</span>
             <span>${e.weightKg.toFixed(1)} кг</span>
           </div>`).join('')
         : `<div class="empty-state">Все още няма записи.</div>`}
     </div>
+
+    <div id="modal-root"></div>
   `;
 
   root.querySelectorAll('[data-range]').forEach((btn) => {
     btn.onclick = () => { activeRange = btn.dataset.range; renderWeight(root); };
+  });
+
+  root.querySelectorAll('[data-week-start]').forEach((cell) => {
+    cell.onclick = () => openWeekDetail(root, weeks.find((wk) => wk.start === cell.dataset.weekStart));
   });
 
   root.querySelector('#save-weight').onclick = async () => {
@@ -73,6 +94,75 @@ export async function renderWeight(root) {
     }
     renderWeight(root);
   };
+}
+
+function openWeekDetail(root, week) {
+  const modalRoot = root.querySelector('#modal-root');
+  const weights = week.entries.map((e) => e.weightKg);
+  const min = Math.min(...weights);
+  const max = Math.max(...weights);
+  const change = week.entries.length > 1 ? week.entries[week.entries.length - 1].weightKg - week.entries[0].weightKg : null;
+
+  renderSheet(modalRoot, `
+    <div class="modal-handle"></div>
+    <h3 style="margin-bottom:14px;">${fmtWeekRange(week.start, week.end)}</h3>
+    <div class="stat-row" style="margin-bottom:14px;">
+      <div class="stat-tile">
+        <div class="stat-value">${week.avg.toFixed(1)}</div>
+        <div class="stat-label">средно</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value">${min.toFixed(1)}–${max.toFixed(1)}</div>
+        <div class="stat-label">мин–макс</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-value" style="${change != null ? `color:${change <= 0 ? 'var(--success)' : 'var(--danger)'};` : ''}">${change != null ? `${change > 0 ? '+' : ''}${change.toFixed(1)}` : '—'}</div>
+        <div class="stat-label">промяна</div>
+      </div>
+    </div>
+    <div class="card">
+      ${week.entries.slice().reverse().map((e) => `
+        <div class="list-row">
+          <span style="font-size:13px;color:var(--text-dim);">${fmtShort(e.date)}</span>
+          <span>${e.weightKg.toFixed(1)} кг</span>
+        </div>`).join('')}
+    </div>
+  `, () => { modalRoot.innerHTML = ''; });
+}
+
+function groupByWeek(entries) {
+  const map = {};
+  entries.forEach((e) => {
+    const start = weekStartIso(e.date);
+    (map[start] ||= []).push(e);
+  });
+  return Object.keys(map).map((start) => {
+    const weekEntries = map[start].slice().sort((a, b) => a.date.localeCompare(b.date));
+    const avg = weekEntries.reduce((s, e) => s + e.weightKg, 0) / weekEntries.length;
+    return { start, end: weekEndIso(start), entries: weekEntries, avg };
+  });
+}
+
+function weekStartIso(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const dow = (d.getDay() + 6) % 7; // Monday-first
+  d.setDate(d.getDate() - dow);
+  return toISODateLocal(d);
+}
+
+function weekEndIso(startIso) {
+  const d = new Date(startIso + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return toISODateLocal(d);
+}
+
+function fmtWeekRange(startIso, endIso) {
+  const s = new Date(startIso + 'T00:00:00');
+  const e = new Date(endIso + 'T00:00:00');
+  const sMonth = s.toLocaleDateString('bg-BG', { month: 'short' });
+  const eMonth = e.toLocaleDateString('bg-BG', { month: 'short' });
+  if (sMonth === eMonth) return `${s.getDate()}–${e.getDate()} ${eMonth}`;
+  return `${s.getDate()} ${sMonth} – ${e.getDate()} ${eMonth}`;
 }
 
 function rangeStats(entries) {
