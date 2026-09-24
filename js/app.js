@@ -70,26 +70,6 @@ new MutationObserver(() => {
   document.body.style.overflowY = hasModal ? 'hidden' : '';
 }).observe(document.body, { childList: true, subtree: true });
 
-// iOS shrinks the visual viewport (not the layout viewport) when the on-screen
-// keyboard opens. A fixed-position bottom sheet sized off 100vh doesn't know
-// about that shrink, so a sheet taller than the space left above the keyboard
-// gets pushed up past the top of the screen instead of just scrolling its own
-// content. Track the real visible height in --app-vh so .modal-overlay/
-// .modal-sheet (see css/style.css) can size themselves to it - the sheet's
-// top (handle, inputs, buttons) then always stays in view, and only its
-// scrollable content (e.g. the food results list) shrinks behind the keyboard.
-function updateAppVh() {
-  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty('--app-vh', `${h}px`);
-}
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', updateAppVh);
-  window.visualViewport.addEventListener('scroll', updateAppVh);
-} else {
-  window.addEventListener('resize', updateAppVh);
-}
-updateAppVh();
-
 async function init() {
   window.addEventListener('db-write', scheduleBackup);
 

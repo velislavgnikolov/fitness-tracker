@@ -473,7 +473,10 @@ function openAddFoodModal(root) {
       <div id="results-area"></div>
     `, close);
     const input = modalRoot.querySelector('#food-search');
-    input.focus();
+    // preventScroll: without it, iOS scrolls the whole page to "reveal" the
+    // input even though it sits in a position:fixed sheet - that scroll is
+    // what pushes the sheet's top off-screen when the keyboard opens.
+    input.focus({ preventScroll: true });
     const pos = currentQuery.length;
     input.setSelectionRange(pos, pos);
     input.oninput = () => {
