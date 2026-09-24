@@ -96,6 +96,23 @@ document.addEventListener('touchmove', (e) => {
   }
 }, { passive: false });
 
+// .modal-overlay's height now tracks the keyboard natively via 100dvh (see
+// css/style.css), which is far more reliable than computing it in JS. The
+// one thing dvh can't express is *position*: if iOS still pans the visual
+// viewport down a bit to reveal a caret despite focus({preventScroll:true}),
+// a plain top:0 sheet would be sized right but placed too high, again
+// showing a gap of page content below it. This just nudges --app-vh-offset
+// to close that gap - a small safety net, not the primary fix.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const updateViewportOffset = () => {
+    document.documentElement.style.setProperty('--app-vh-offset', `${vv.offsetTop}px`);
+  };
+  vv.addEventListener('resize', updateViewportOffset);
+  vv.addEventListener('scroll', updateViewportOffset);
+  updateViewportOffset();
+}
+
 async function init() {
   window.addEventListener('db-write', scheduleBackup);
 

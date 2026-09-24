@@ -305,7 +305,14 @@ input[type="time"] {
 
 .modal-overlay {
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: var(--app-vh-offset, 0px);
+  /* dvh tracks the *visible* viewport natively (shrinks with the on-screen
+     keyboard) - far more reliable than anything computed in JS. The plain
+     vh line is just a fallback for browsers that don't understand dvh. */
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0,0,0,0.65);
   backdrop-filter: blur(4px);
   display: flex;
@@ -315,6 +322,7 @@ input[type="time"] {
 .modal-sheet {
   width: 100%;
   max-height: 86vh;
+  max-height: 86dvh;
   overflow-y: auto;
   background: #0f1011;
   border-top: 1px solid var(--border-strong);
