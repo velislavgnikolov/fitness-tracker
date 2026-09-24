@@ -340,4 +340,14 @@ input[type="time"] {
 }
 .fab:active { transform: scale(0.95); }
 
+/* Month grid used by the workout calendar and the food-log calendar */
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.cal-weekday { text-align:center; font-size:11px; color:var(--text-faint); padding-bottom:6px; }
+.cal-cell { aspect-ratio:1; border-radius:12px; background:var(--surface); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; position:relative; }
+.cal-cell.empty { background:none; border:none; cursor:default; }
+.cal-cell.today { border-color:var(--accent); }
+.cal-daynum { font-size:13px; color:var(--text); }
+.cal-dots { display:flex; gap:2px; }
+.cal-dot { width:5px; height:5px; border-radius:50%; }
+
 a { color: var(--silver); }

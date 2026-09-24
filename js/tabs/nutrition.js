@@ -90,8 +90,13 @@ export async function renderNutrition(root) {
       </div>
     </div>
 
-    <div class="section-heading">Последните 7 дни</div>
-    <div class="card">${weekBarChart(last7, goals.kcalGoal, todayIso)}</div>
+    <div id="week-summary" style="cursor:pointer;">
+      <div class="section-heading" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Последните 7 дни</span>
+        ${chevron('right')}
+      </div>
+      <div class="card">${weekBarChart(last7, goals.kcalGoal, todayIso)}</div>
+    </div>
 
     <div class="section-heading">Дневник</div>
     <div class="card" id="log-list">
@@ -110,6 +115,7 @@ export async function renderNutrition(root) {
   root.querySelector('#theme-btn').onclick = () => openThemeSettings();
   root.querySelector('#todo-btn').onclick = () => openTodoList();
   root.querySelector('#backup-btn').onclick = () => openBackupPanel();
+  root.querySelector('#week-summary').onclick = () => openFoodCalendar(root, goals);
 
   root.querySelectorAll('[data-delete-log]').forEach((btn) => {
     btn.onclick = async () => {
@@ -158,6 +164,113 @@ function openEditLogModal(root, entry) {
     close();
     renderNutrition(root);
   };
+}
+
+// ---------- Food calendar (month view of past days, tap a day for its macros) ----------
+
+const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+const MONTH_NAMES = ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'];
+let foodCalYear = null;
+let foodCalMonth = null;
+
+async function openFoodCalendar(root, goals) {
+  const modalRoot = root.querySelector('#modal-root');
+  let allLogs = await DB.getAll('foodLog');
+  let datesWithFood = new Set(allLogs.map((l) => l.date));
+
+  if (foodCalYear == null) {
+    const now = new Date();
+    foodCalYear = now.getFullYear();
+    foodCalMonth = now.getMonth();
+  }
+
+  function close() { modalRoot.innerHTML = ''; }
+
+  function drawMonth() {
+    const first = new Date(foodCalYear, foodCalMonth, 1);
+    const startOffset = (first.getDay() + 6) % 7; // Monday-first
+    const daysInMonth = new Date(foodCalYear, foodCalMonth + 1, 0).getDate();
+    const todayIso = todayISO();
+    const monthPrefix = `${foodCalYear}-${String(foodCalMonth + 1).padStart(2, '0')}-`;
+
+    let cells = '';
+    for (let i = 0; i < startOffset; i++) cells += `<div class="cal-cell empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const iso = `${monthPrefix}${String(day).padStart(2, '0')}`;
+      const isToday = iso === todayIso;
+      cells += `
+        <div class="cal-cell${isToday ? ' today' : ''}" data-food-day="${iso}">
+          <span class="cal-daynum">${day}</span>
+          <div class="cal-dots">${datesWithFood.has(iso) ? `<span class="cal-dot" style="background:var(--accent);"></span>` : ''}</div>
+        </div>`;
+    }
+
+    renderSheet(modalRoot, `
+      <div class="modal-handle"></div>
+      <div class="row" style="align-items:center;margin-bottom:14px;">
+        <button class="btn-icon" id="fc-prev">${chevron('left')}</button>
+        <div style="text-align:center;flex:3;font-size:15px;">${MONTH_NAMES[foodCalMonth]} ${foodCalYear}</div>
+        <button class="btn-icon" id="fc-next">${chevron('right')}</button>
+      </div>
+      <div class="cal-grid" style="margin-bottom:8px;">
+        ${WEEKDAYS.map((w) => `<div class="cal-weekday">${w}</div>`).join('')}
+      </div>
+      <div class="cal-grid">${cells}</div>
+    `, close);
+
+    modalRoot.querySelector('#fc-prev').onclick = () => {
+      foodCalMonth--; if (foodCalMonth < 0) { foodCalMonth = 11; foodCalYear--; }
+      drawMonth();
+    };
+    modalRoot.querySelector('#fc-next').onclick = () => {
+      foodCalMonth++; if (foodCalMonth > 11) { foodCalMonth = 0; foodCalYear++; }
+      drawMonth();
+    };
+    modalRoot.querySelectorAll('[data-food-day]').forEach((cell) => {
+      cell.onclick = () => drawDayDetail(cell.dataset.foodDay);
+    });
+  }
+
+  function drawDayDetail(iso) {
+    const dayLogs = allLogs.filter((l) => l.date === iso);
+    const totals = sumLogs(dayLogs);
+
+    renderSheet(modalRoot, `
+      <div class="modal-handle"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <button class="btn-icon" id="fc-back">${chevron('left')}</button>
+        <h3 style="margin:0;text-transform:capitalize;">${fmtDateHuman(iso)}</h3>
+      </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="font-size:20px;font-family:'Space Grotesk',sans-serif;font-weight:600;margin-bottom:12px;">${Math.round(totals.kcal)} <span style="font-size:12px;color:var(--text-faint);font-weight:400;">/ ${goals.kcalGoal} kcal</span></div>
+        ${macroBar('Протеин', totals.protein, goals.proteinGoal, 'var(--accent)')}
+        ${macroBar('Въглехидрати', totals.carbs, goals.carbsGoal, 'var(--silver)')}
+        ${macroBar('Мазнини', totals.fat, goals.fatGoal, '#8a8f91')}
+      </div>
+      <div class="card">
+        ${dayLogs.length ? dayLogs.map(logRow).join('') : `<div class="empty-state">Няма въведени храни за този ден.</div>`}
+      </div>
+    `, close);
+
+    modalRoot.querySelector('#fc-back').onclick = () => drawMonth();
+    modalRoot.querySelectorAll('[data-delete-log]').forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirmDelete('Да изтрия ли този запис?')) return;
+        await DB.delete('foodLog', Number(btn.dataset.deleteLog));
+        allLogs = await DB.getAll('foodLog');
+        datesWithFood = new Set(allLogs.map((l) => l.date));
+        drawDayDetail(iso);
+      };
+    });
+    modalRoot.querySelectorAll('[data-edit-log]').forEach((btn) => {
+      btn.onclick = () => {
+        const entry = dayLogs.find((l) => l.id === Number(btn.dataset.editLog));
+        openEditLogModal(root, entry);
+      };
+    });
+  }
+
+  drawMonth();
 }
 
 function sumLogs(logs) {
