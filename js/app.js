@@ -62,46 +62,39 @@ document.addEventListener('touchend', (e) => {
   lastTouchEnd = now;
 }, { passive: false });
 
-// Lock background scroll/movement while any bottom sheet is open, so dragging
-// to dismiss it can't also scroll the page underneath. `body` is the app's
-// actual scroll container (html never scrolls), so this just freezes it.
+// Lock background scroll/movement while any bottom sheet is open, so nothing
+// behind it can ever be seen shifting around - especially with the keyboard
+// open, where iOS's own viewport panning made plain overflow:hidden on body
+// unreliable (tried and reverted). Taking body fully out of flow with
+// position:fixed is the robust version of the same lock: there's no scroll
+// position left for a touch or the keyboard to disturb. Also hides the tab
+// bar and FAB outright, so there's nothing else fixed-position behind the
+// sheet that could visibly jump around while the keyboard opens/closes.
+let lockedScrollTop = 0;
 new MutationObserver(() => {
   const hasModal = !!document.querySelector('.modal-overlay');
-  document.body.style.overflowY = hasModal ? 'hidden' : '';
+  const isLocked = document.body.classList.contains('modal-locked');
+  if (hasModal && !isLocked) {
+    lockedScrollTop = document.body.scrollTop;
+    document.body.classList.add('modal-locked');
+    document.body.style.top = `-${lockedScrollTop}px`;
+  } else if (!hasModal && isLocked) {
+    document.body.classList.remove('modal-locked');
+    document.body.style.top = '';
+    document.body.scrollTop = lockedScrollTop;
+  }
 }).observe(document.body, { childList: true, subtree: true });
 
-// iOS keeps allowing touch-driven scroll/bounce of the page behind a modal
-// even with body{overflow-y:hidden} - especially with a focused input and
-// the keyboard open. Belt-and-braces: block any touchmove that isn't inside
-// the open sheet itself, so the background truly can't move while the
-// sheet's own content keeps scrolling exactly as smoothly as before.
+// Extra safety net on top of the lock above: block any touch-drag that
+// isn't inside the open sheet, so nothing behind it can rubber-band/bounce
+// even for a frame. Touches inside .modal-sheet are left alone, so its own
+// content keeps scrolling exactly as smoothly as before.
 document.addEventListener('touchmove', (e) => {
-  if (!document.querySelector('.modal-overlay')) return;
+  if (!document.body.classList.contains('modal-locked')) return;
   if (!e.target.closest('.modal-sheet')) {
     e.preventDefault();
   }
 }, { passive: false });
-
-// When the on-screen keyboard opens, iOS both shrinks AND pans the visual
-// viewport (to keep the caret visible) without moving the layout viewport
-// that position:fixed elements are anchored to. Only tracking the shrunk
-// height (a previous attempt) left the fixed sheet's top-left origin
-// pinned to the now-scrolled-away layout origin - wrong position, not just
-// wrong size, which is what caused the sheet to hide its top and reveal
-// page content in the gap left behind. Tracking both offsetTop and height
-// keeps the sheet glued exactly to whatever part of the page is actually
-// visible, keyboard or not.
-function updateViewportVars() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  document.documentElement.style.setProperty('--app-vh', `${vv.height}px`);
-  document.documentElement.style.setProperty('--app-vh-offset', `${vv.offsetTop}px`);
-}
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', updateViewportVars);
-  window.visualViewport.addEventListener('scroll', updateViewportVars);
-  updateViewportVars();
-}
 
 async function init() {
   window.addEventListener('db-write', scheduleBackup);
