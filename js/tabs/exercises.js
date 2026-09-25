@@ -14,6 +14,14 @@ const TIME_RANGES = [
 ];
 let timeRange = 'always';
 
+const MMAP_RANGES = [
+  { id: 'week', label: 'Седмица', days: 7 },
+  { id: '30d', label: '30 дни', days: 30 },
+  { id: '90d', label: '90 дни', days: 90 },
+  { id: 'always', label: 'Винаги', days: null },
+];
+let mmapRange = 'week';
+
 export async function renderExercises(root) {
   const [exercises, allSets, workouts] = await Promise.all([
     DB.getAll('exercises'),
@@ -62,21 +70,22 @@ export async function renderExercises(root) {
   });
   const sportEntries = Object.entries(sportMinutes).sort((a, b) => b[1] - a[1]);
 
-  // Muscle map: how many separate workouts this week (Mon-Sun) touched each
-  // muscle group - a workout with both chest and triceps exercises counts
-  // once for each, not twice for either.
-  const weekStartIso = mondayOf(todayISO());
-  const weekWorkoutIds = new Set(workouts.filter((w) => w.date >= weekStartIso).map((w) => w.id));
-  const weekGroupCounts = {};
+  // Muscle map: how many separate workouts in the selected range touched
+  // each muscle group - a workout with both chest and triceps exercises
+  // counts once for each, not twice for either.
+  const mmapRangeDef = MMAP_RANGES.find((r) => r.id === mmapRange) || MMAP_RANGES[0];
+  const mmapCutoffIso = mmapRangeDef.days != null ? shiftDate(todayISO(), -(mmapRangeDef.days - 1)) : null;
+  const mmapWorkoutIds = new Set((mmapCutoffIso ? workouts.filter((w) => w.date >= mmapCutoffIso) : workouts).map((w) => w.id));
+  const mmapGroupCounts = {};
   const touchedByWorkout = {};
   allSets.forEach((s) => {
-    if (!weekWorkoutIds.has(s.workoutId)) return;
+    if (!mmapWorkoutIds.has(s.workoutId)) return;
     const ex = exerciseById[s.exerciseId];
     if (!ex || ex.muscleGroup === 'cardio' || ex.muscleGroup === SPORT_GROUP_ID) return;
     const key = `${s.workoutId}:${ex.muscleGroup}`;
     if (touchedByWorkout[key]) return;
     touchedByWorkout[key] = true;
-    weekGroupCounts[ex.muscleGroup] = (weekGroupCounts[ex.muscleGroup] || 0) + 1;
+    mmapGroupCounts[ex.muscleGroup] = (mmapGroupCounts[ex.muscleGroup] || 0) + 1;
   });
 
   root.innerHTML = `
@@ -97,7 +106,10 @@ export async function renderExercises(root) {
       </div>
     </div>
 
-    <div class="section-heading">Тренирани мускули тази седмица</div>
+    <div class="section-heading">Тренирани мускули</div>
+    <div class="row" style="margin-bottom:8px;">
+      ${MMAP_RANGES.map((r) => `<button class="btn ${r.id === mmapRange ? 'btn-primary' : 'btn-ghost'}" data-mmap-range="${r.id}" style="font-size:11.5px;padding:8px 4px;">${r.label}</button>`).join('')}
+    </div>
     <div class="card" style="margin-bottom:16px;">
       <div id="muscle-map-root"></div>
     </div>
@@ -135,7 +147,7 @@ export async function renderExercises(root) {
     <div id="modal-root"></div>
   `;
 
-  await renderMuscleMap(root.querySelector('#muscle-map-root'), weekGroupCounts, BODY_MAP_GROUPS);
+  await renderMuscleMap(root.querySelector('#muscle-map-root'), mmapGroupCounts, BODY_MAP_GROUPS);
 
   root.querySelectorAll('[data-open-ex]').forEach((row) => {
     row.onclick = () => openExerciseHistory(root, Number(row.dataset.openEx), row.dataset.exName);
@@ -152,6 +164,12 @@ export async function renderExercises(root) {
       renderExercises(root);
     };
   });
+  root.querySelectorAll('[data-mmap-range]').forEach((btn) => {
+    btn.onclick = () => {
+      mmapRange = btn.dataset.mmapRange;
+      renderExercises(root);
+    };
+  });
 
   root.querySelector('#add-ex-fab').onclick = () => openAddExercise(root);
 }
@@ -159,14 +177,6 @@ export async function renderExercises(root) {
 function shiftDate(iso, delta) {
   const d = new Date(iso + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function mondayOf(iso) {
-  const d = new Date(iso + 'T00:00:00');
-  const dow = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - dow);
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
