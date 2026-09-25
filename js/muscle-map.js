@@ -11,10 +11,7 @@
 let showBack = false;
 let svgTemplateCache = null; // { front, back } raw template text, fetched once
 
-// Deltoids and triceps aren't drawn as separate shapes in the source art
-// (they're merged into the chest/back silhouette), so only these 5 zones
-// can be highlighted directly on the figure.
-const BODY_ZONES = ['chest', 'back', 'biceps', 'core', 'legs'];
+const BODY_ZONES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'core', 'legs'];
 
 async function loadTemplates() {
   if (svgTemplateCache) return svgTemplateCache;
@@ -30,7 +27,9 @@ function fillTemplate(template, groupCounts) {
   return template
     .replaceAll('__CHEST__', intensityColor(groupCounts.chest || 0))
     .replaceAll('__BACK__', intensityColor(groupCounts.back || 0))
+    .replaceAll('__SHOULDERS__', intensityColor(groupCounts.shoulders || 0))
     .replaceAll('__BICEPS__', intensityColor(groupCounts.biceps || 0))
+    .replaceAll('__TRICEPS__', intensityColor(groupCounts.triceps || 0))
     .replaceAll('__CORE__', intensityColor(groupCounts.core || 0))
     .replaceAll('__LEGS__', intensityColor(groupCounts.legs || 0))
     .replaceAll('__NEUTRAL__', 'var(--surface-strong)');
@@ -64,7 +63,7 @@ export async function renderMuscleMap(container, groupCounts, relevantGroups) {
         </div>`).join('')}
     </div>
     <p style="color:var(--text-faint);font-size:11px;margin:10px 0 0;line-height:1.5;">
-      ${relevantGroups.some((g) => !BODY_ZONES.includes(g.id)) ? 'Рамене и трицепс не се открояват отделно на фигурата, но се броят в списъка по-горе. ' : ''}Анатомия: Wikimedia Commons (CC BY-SA 4.0).
+      ${relevantGroups.some((g) => !BODY_ZONES.includes(g.id)) ? 'Някои категории не се открояват отделно на фигурата, но се броят в списъка по-горе. ' : ''}Анатомия: Wikimedia Commons (CC BY-SA 4.0).
     </p>
   `;
 
