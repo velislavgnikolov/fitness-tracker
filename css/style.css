@@ -372,4 +372,13 @@ input[type="time"] {
 .cal-dots { display:flex; gap:2px; }
 .cal-dot { width:5px; height:5px; border-radius:50%; }
 
+/* Swipeable front/back muscle-map body diagram (js/muscle-map.js) */
+.mmap-viewport { overflow: hidden; }
+.mmap-track { display: flex; width: 200%; }
+.mmap-panel { flex: 0 0 50%; display: flex; justify-content: center; padding: 4px 0; }
+.mmap-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 4px; }
+.mmap-dots { display: flex; gap: 6px; }
+.mmap-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
+.mmap-dot.active { background: var(--accent); }
+
 a { color: var(--silver); }

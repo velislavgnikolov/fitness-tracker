@@ -1,6 +1,9 @@
 import { DB, todayISO } from '../db.js';
 import { MUSCLE_GROUPS, SPORT_GROUP_ID } from '../exercises-seed.js';
 import { renderSheet, confirmDelete } from '../sheet.js';
+import { renderMuscleMap } from '../muscle-map.js';
+
+const BODY_MAP_GROUPS = MUSCLE_GROUPS.filter((g) => g.id !== 'cardio' && g.id !== SPORT_GROUP_ID);
 
 const SPORT_COLORS = ['#fb923c', '#f472b6', '#22d3ee', '#a3e635', '#facc15', '#60a5fa'];
 const TIME_RANGES = [
@@ -59,6 +62,23 @@ export async function renderExercises(root) {
   });
   const sportEntries = Object.entries(sportMinutes).sort((a, b) => b[1] - a[1]);
 
+  // Muscle map: how many separate workouts this week (Mon-Sun) touched each
+  // muscle group - a workout with both chest and triceps exercises counts
+  // once for each, not twice for either.
+  const weekStartIso = mondayOf(todayISO());
+  const weekWorkoutIds = new Set(workouts.filter((w) => w.date >= weekStartIso).map((w) => w.id));
+  const weekGroupCounts = {};
+  const touchedByWorkout = {};
+  allSets.forEach((s) => {
+    if (!weekWorkoutIds.has(s.workoutId)) return;
+    const ex = exerciseById[s.exerciseId];
+    if (!ex || ex.muscleGroup === 'cardio' || ex.muscleGroup === SPORT_GROUP_ID) return;
+    const key = `${s.workoutId}:${ex.muscleGroup}`;
+    if (touchedByWorkout[key]) return;
+    touchedByWorkout[key] = true;
+    weekGroupCounts[ex.muscleGroup] = (weekGroupCounts[ex.muscleGroup] || 0) + 1;
+  });
+
   root.innerHTML = `
     <h1 class="page-title">Тренировки</h1>
 
@@ -75,6 +95,11 @@ export async function renderExercises(root) {
         <div class="stat-value">${fmtVolume(grandTotalVolume)}</div>
         <div class="stat-label">общо вдигнати кг</div>
       </div>
+    </div>
+
+    <div class="section-heading">Тренирани мускули тази седмица</div>
+    <div class="card" style="margin-bottom:16px;">
+      <div id="muscle-map-root"></div>
     </div>
 
     ${recentSets.length ? `<div class="card" style="margin-bottom:16px;">${distributionBar(groupCounts)}</div>` : ''}
@@ -110,6 +135,8 @@ export async function renderExercises(root) {
     <div id="modal-root"></div>
   `;
 
+  renderMuscleMap(root.querySelector('#muscle-map-root'), weekGroupCounts, BODY_MAP_GROUPS);
+
   root.querySelectorAll('[data-open-ex]').forEach((row) => {
     row.onclick = () => openExerciseHistory(root, Number(row.dataset.openEx), row.dataset.exName);
   });
@@ -132,6 +159,14 @@ export async function renderExercises(root) {
 function shiftDate(iso, delta) {
   const d = new Date(iso + 'T00:00:00');
   d.setDate(d.getDate() + delta);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function mondayOf(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow);
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
