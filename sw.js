@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-tracker-v37';
+const CACHE_NAME = 'fitness-tracker-v38';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const ASSETS = [
   './js/food-api.js',
   './js/barcode-scanner.js',
   './js/muscle-map.js',
+  './js/body-front.svg',
+  './js/body-back.svg',
   './js/reminders.js',
   './js/theme.js',
   './js/theme-ui.js',

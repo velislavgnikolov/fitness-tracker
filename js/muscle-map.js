@@ -1,15 +1,51 @@
 // Swipeable front/back body diagram showing how many times each muscle
 // group was trained this week - color intensity grows with the count
 // (capped at 3+), no coloring means untouched this week.
+//
+// The body art itself (js/body-front.svg, js/body-back.svg) is derived from
+// "Muscles front and back.svg" on Wikimedia Commons (CC BY-SA 4.0) - each
+// muscle-belly shape's fill was replaced with a __ZONE__ placeholder token
+// so it can be recolored per zone at render time; everything else (bone,
+// tendon, fiber-line detail) is untouched original artwork.
 
 let showBack = false;
+let svgTemplateCache = null; // { front, back } raw template text, fetched once
 
-export function renderMuscleMap(container, groupCounts, relevantGroups) {
+// Deltoids and triceps aren't drawn as separate shapes in the source art
+// (they're merged into the chest/back silhouette), so only these 5 zones
+// can be highlighted directly on the figure.
+const BODY_ZONES = ['chest', 'back', 'biceps', 'core', 'legs'];
+
+async function loadTemplates() {
+  if (svgTemplateCache) return svgTemplateCache;
+  const [front, back] = await Promise.all([
+    fetch('./js/body-front.svg').then((r) => r.text()),
+    fetch('./js/body-back.svg').then((r) => r.text()),
+  ]);
+  svgTemplateCache = { front, back };
+  return svgTemplateCache;
+}
+
+function fillTemplate(template, groupCounts) {
+  return template
+    .replaceAll('__CHEST__', intensityColor(groupCounts.chest || 0))
+    .replaceAll('__BACK__', intensityColor(groupCounts.back || 0))
+    .replaceAll('__BICEPS__', intensityColor(groupCounts.biceps || 0))
+    .replaceAll('__CORE__', intensityColor(groupCounts.core || 0))
+    .replaceAll('__LEGS__', intensityColor(groupCounts.legs || 0))
+    .replaceAll('__NEUTRAL__', 'var(--surface-strong)');
+}
+
+export async function renderMuscleMap(container, groupCounts, relevantGroups) {
+  const { front, back } = await loadTemplates();
+  const frontSvg = fillTemplate(front, groupCounts).replace('<svg ', '<svg style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;" ');
+  const backSvg = fillTemplate(back, groupCounts).replace('<svg ', '<svg style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;" ');
+
   container.innerHTML = `
     <div class="mmap-viewport">
       <div class="mmap-track" id="mmap-track">
-        <div class="mmap-panel">${bodySvg('front', groupCounts)}</div>
-        <div class="mmap-panel">${bodySvg('back', groupCounts)}</div>
+        <div class="mmap-panel">${frontSvg}</div>
+        <div class="mmap-panel">${backSvg}</div>
       </div>
     </div>
     <div class="mmap-nav">
@@ -27,6 +63,9 @@ export function renderMuscleMap(container, groupCounts, relevantGroups) {
           ${g.label}${groupCounts[g.id] ? ` · ${groupCounts[g.id]}` : ''}
         </div>`).join('')}
     </div>
+    <p style="color:var(--text-faint);font-size:11px;margin:10px 0 0;line-height:1.5;">
+      ${relevantGroups.some((g) => !BODY_ZONES.includes(g.id)) ? 'Рамене и трицепс не се открояват отделно на фигурата, но се броят в списъка по-горе. ' : ''}Анатомия: Wikimedia Commons (CC BY-SA 4.0).
+    </p>
   `;
 
   const track = container.querySelector('#mmap-track');
@@ -94,53 +133,6 @@ function intensityColor(count) {
   if (!count) return 'var(--surface-strong)';
   const pct = Math.min(count, 3) / 3;
   return `color-mix(in srgb, var(--accent) ${Math.round(15 + pct * 75)}%, var(--surface-strong))`;
-}
-
-function bodySvg(view, groupCounts) {
-  const c = (id) => intensityColor(groupCounts[id] || 0);
-  const neutral = 'var(--surface-strong)';
-  const stroke = 'var(--border-strong)';
-
-  const shoulders = `
-    <ellipse cx="46" cy="78" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>
-    <ellipse cx="154" cy="78" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>`;
-
-  const armColor = c(view === 'front' ? 'biceps' : 'triceps');
-  const arms = `
-    <path d="M32,80 C22,95 18,118 20,142 L44,146 C46,120 48,98 54,84 C46,76 38,76 32,80 Z" fill="${armColor}" stroke="${stroke}"></path>
-    <path d="M168,80 C178,95 182,118 180,142 L156,146 C154,120 152,98 146,84 C154,76 162,76 168,80 Z" fill="${armColor}" stroke="${stroke}"></path>
-    <path d="M20,142 C17,165 19,188 26,208 L42,210 C44,188 45,165 44,146 Z" fill="${neutral}" stroke="${stroke}"></path>
-    <path d="M180,142 C183,165 181,188 174,208 L158,210 C156,188 155,165 156,146 Z" fill="${neutral}" stroke="${stroke}"></path>
-    <ellipse cx="32" cy="222" rx="11" ry="14" fill="${neutral}" stroke="${stroke}"></ellipse>
-    <ellipse cx="168" cy="222" rx="11" ry="14" fill="${neutral}" stroke="${stroke}"></ellipse>`;
-
-  const torso = view === 'front'
-    ? `
-    <path d="M50,70 C40,85 38,105 44,122 L156,122 C162,105 160,85 150,70 C130,58 70,58 50,70 Z" fill="${c('chest')}" stroke="${stroke}"></path>
-    <path d="M44,122 L156,122 C160,145 156,168 146,188 C130,198 70,198 54,188 C44,168 40,145 44,122 Z" fill="${c('core')}" stroke="${stroke}"></path>`
-    : `
-    <path d="M42,68 C32,90 30,115 36,140 C34,165 38,185 50,200 L150,200 C162,185 166,165 164,140 C170,115 168,90 158,68 C140,56 60,56 42,68 Z" fill="${c('back')}" stroke="${stroke}"></path>`;
-
-  const legs = `
-    <path d="M54,188 L146,188 C148,196 148,204 146,210 L54,210 C52,204 52,196 54,188 Z" fill="${neutral}" stroke="${stroke}"></path>
-    <path d="M56,210 C48,230 46,255 50,278 L92,278 C94,255 92,230 88,210 Z" fill="${c('legs')}" stroke="${stroke}"></path>
-    <path d="M144,210 C152,230 154,255 150,278 L108,278 C106,255 108,230 112,210 Z" fill="${c('legs')}" stroke="${stroke}"></path>
-    <path d="M50,278 C47,305 48,332 54,355 L88,355 C92,332 93,305 92,278 Z" fill="${neutral}" stroke="${stroke}"></path>
-    <path d="M150,278 C153,305 152,332 146,355 L112,355 C108,332 107,305 108,278 Z" fill="${neutral}" stroke="${stroke}"></path>
-    <ellipse cx="68" cy="368" rx="20" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>
-    <ellipse cx="132" cy="368" rx="20" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>`;
-
-  return `
-    <svg viewBox="0 0 200 400" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;">
-      <g stroke-width="1.5">
-        <ellipse cx="100" cy="28" rx="19" ry="23" fill="${neutral}" stroke="${stroke}"></ellipse>
-        <path d="M88,48 L112,48 L107,64 L93,64 Z" fill="${neutral}" stroke="${stroke}"></path>
-        ${shoulders}
-        ${torso}
-        ${arms}
-        ${legs}
-      </g>
-    </svg>`;
 }
 
 function chevron(dir) {

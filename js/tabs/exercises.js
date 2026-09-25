@@ -135,7 +135,7 @@ export async function renderExercises(root) {
     <div id="modal-root"></div>
   `;
 
-  renderMuscleMap(root.querySelector('#muscle-map-root'), weekGroupCounts, BODY_MAP_GROUPS);
+  await renderMuscleMap(root.querySelector('#muscle-map-root'), weekGroupCounts, BODY_MAP_GROUPS);
 
   root.querySelectorAll('[data-open-ex]').forEach((row) => {
     row.onclick = () => openExerciseHistory(root, Number(row.dataset.openEx), row.dataset.exName);
