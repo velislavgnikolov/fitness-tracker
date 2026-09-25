@@ -102,36 +102,39 @@ function bodySvg(view, groupCounts) {
   const stroke = 'var(--border-strong)';
 
   const shoulders = `
-    <ellipse cx="34" cy="60" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>
-    <ellipse cx="126" cy="60" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>`;
+    <ellipse cx="46" cy="78" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>
+    <ellipse cx="154" cy="78" rx="17" ry="15" fill="${c('shoulders')}" stroke="${stroke}"></ellipse>`;
 
+  const armColor = c(view === 'front' ? 'biceps' : 'triceps');
   const arms = `
-    <rect x="12" y="58" width="24" height="68" rx="12" fill="${c(view === 'front' ? 'biceps' : 'triceps')}" stroke="${stroke}"></rect>
-    <rect x="124" y="58" width="24" height="68" rx="12" fill="${c(view === 'front' ? 'biceps' : 'triceps')}" stroke="${stroke}"></rect>
-    <rect x="9" y="124" width="20" height="58" rx="10" fill="${neutral}" stroke="${stroke}"></rect>
-    <rect x="131" y="124" width="20" height="58" rx="10" fill="${neutral}" stroke="${stroke}"></rect>
-    <ellipse cx="19" cy="190" rx="10" ry="12" fill="${neutral}" stroke="${stroke}"></ellipse>
-    <ellipse cx="141" cy="190" rx="10" ry="12" fill="${neutral}" stroke="${stroke}"></ellipse>`;
+    <path d="M32,80 C22,95 18,118 20,142 L44,146 C46,120 48,98 54,84 C46,76 38,76 32,80 Z" fill="${armColor}" stroke="${stroke}"></path>
+    <path d="M168,80 C178,95 182,118 180,142 L156,146 C154,120 152,98 146,84 C154,76 162,76 168,80 Z" fill="${armColor}" stroke="${stroke}"></path>
+    <path d="M20,142 C17,165 19,188 26,208 L42,210 C44,188 45,165 44,146 Z" fill="${neutral}" stroke="${stroke}"></path>
+    <path d="M180,142 C183,165 181,188 174,208 L158,210 C156,188 155,165 156,146 Z" fill="${neutral}" stroke="${stroke}"></path>
+    <ellipse cx="32" cy="222" rx="11" ry="14" fill="${neutral}" stroke="${stroke}"></ellipse>
+    <ellipse cx="168" cy="222" rx="11" ry="14" fill="${neutral}" stroke="${stroke}"></ellipse>`;
 
   const torso = view === 'front'
     ? `
-    <rect x="46" y="52" width="68" height="45" rx="16" fill="${c('chest')}" stroke="${stroke}"></rect>
-    <rect x="50" y="95" width="60" height="55" rx="14" fill="${c('core')}" stroke="${stroke}"></rect>`
+    <path d="M50,70 C40,85 38,105 44,122 L156,122 C162,105 160,85 150,70 C130,58 70,58 50,70 Z" fill="${c('chest')}" stroke="${stroke}"></path>
+    <path d="M44,122 L156,122 C160,145 156,168 146,188 C130,198 70,198 54,188 C44,168 40,145 44,122 Z" fill="${c('core')}" stroke="${stroke}"></path>`
     : `
-    <rect x="40" y="50" width="80" height="100" rx="18" fill="${c('back')}" stroke="${stroke}"></rect>`;
+    <path d="M42,68 C32,90 30,115 36,140 C34,165 38,185 50,200 L150,200 C162,185 166,165 164,140 C170,115 168,90 158,68 C140,56 60,56 42,68 Z" fill="${c('back')}" stroke="${stroke}"></path>`;
 
   const legs = `
-    <rect x="48" y="148" width="64" height="22" rx="11" fill="${neutral}" stroke="${stroke}"></rect>
-    <rect x="46" y="170" width="30" height="140" rx="15" fill="${c('legs')}" stroke="${stroke}"></rect>
-    <rect x="84" y="170" width="30" height="140" rx="15" fill="${c('legs')}" stroke="${stroke}"></rect>
-    <ellipse cx="61" cy="318" rx="16" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>
-    <ellipse cx="99" cy="318" rx="16" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>`;
+    <path d="M54,188 L146,188 C148,196 148,204 146,210 L54,210 C52,204 52,196 54,188 Z" fill="${neutral}" stroke="${stroke}"></path>
+    <path d="M56,210 C48,230 46,255 50,278 L92,278 C94,255 92,230 88,210 Z" fill="${c('legs')}" stroke="${stroke}"></path>
+    <path d="M144,210 C152,230 154,255 150,278 L108,278 C106,255 108,230 112,210 Z" fill="${c('legs')}" stroke="${stroke}"></path>
+    <path d="M50,278 C47,305 48,332 54,355 L88,355 C92,332 93,305 92,278 Z" fill="${neutral}" stroke="${stroke}"></path>
+    <path d="M150,278 C153,305 152,332 146,355 L112,355 C108,332 107,305 108,278 Z" fill="${neutral}" stroke="${stroke}"></path>
+    <ellipse cx="68" cy="368" rx="20" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>
+    <ellipse cx="132" cy="368" rx="20" ry="10" fill="${neutral}" stroke="${stroke}"></ellipse>`;
 
   return `
-    <svg viewBox="0 0 160 340" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;">
+    <svg viewBox="0 0 200 400" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;">
       <g stroke-width="1.5">
-        <circle cx="80" cy="22" r="17" fill="${neutral}" stroke="${stroke}"></circle>
-        <rect x="72" y="37" width="16" height="12" rx="4" fill="${neutral}" stroke="${stroke}"></rect>
+        <ellipse cx="100" cy="28" rx="19" ry="23" fill="${neutral}" stroke="${stroke}"></ellipse>
+        <path d="M88,48 L112,48 L107,64 L93,64 Z" fill="${neutral}" stroke="${stroke}"></path>
         ${shoulders}
         ${torso}
         ${arms}
