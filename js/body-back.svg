@@ -2909,7 +2909,7 @@
            inkscape:path-effect="#path-effect2256"
            id="b-path2254"
            d="m 106.10484,290.38888 c 1.65856,5.49733 3.46241,10.95082 5.40902,16.35287 1.54575,4.28961 3.18152,8.54679 4.90586,12.76778 -1.97237,-4.21222 -3.98515,-8.40551 -6.03798,-12.57911 -2.2968,-4.66961 -4.66082,-9.3598 -5.94364,-14.4031 -0.71556,-2.81318 -1.0861,-5.71395 -1.10066,-8.61668 l 1.33833,-0.0741 1.42907,6.55236 z"
-           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__TRICEPS__;fill-opacity:1;stroke:#a6a29a;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
+           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__NEUTRAL__;fill-opacity:1;stroke:#a6a29a;stroke-width:0.499999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
         <path
            inkscape:original-d="m 101.8631,274.21853 c 0,0 1.87115,1.51479 2.80633,2.27179 0.93518,0.757 4.87793,6.14746 7.3165,9.22081 2.43857,3.07332 3.87541,9.38784 3.87541,9.38784 0,0 -1.87062,-8.06238 -2.80633,-12.09395 -0.93571,-4.03158 -2.31607,-5.32286 -3.47451,-7.98467 -1.15843,-2.66184 -4.81085,-5.17835 -4.81085,-5.17835 0,0 -2.90655,4.37653 -2.90655,4.37653 z"
            inkscape:path-effect="#path-effect1650"
@@ -3110,8 +3110,7 @@
        id="b-path1381"
        sodipodi:nodetypes="cccccc" />
   </g>
-<use xlink:href="#b-path1452" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1648" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1598" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1697" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path2254" transform="translate(610.5,0) scale(-1,1)"/>
-<use xlink:href="#b-path1652" transform="translate(610.5,0) scale(-1,1)"/>
+<use xlink:href="#b-path1452" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1648" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1598" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1697" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1652" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1627" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1486" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1432" transform="translate(610.5,0) scale(-1,1)"/>
