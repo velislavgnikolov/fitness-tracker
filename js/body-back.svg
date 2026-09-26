@@ -2896,13 +2896,13 @@
            inkscape:path-effect="#path-effect1699"
            id="b-path1697"
            d="m 105.82249,277.58189 c -0.0252,1.4662 0.0575,2.93424 0.24708,4.38835 0.59188,4.53917 2.21068,8.86951 3.44903,13.27642 1.3495,4.80246 2.26542,9.76092 4.29948,14.31584 1.14826,2.57132 2.64791,5.00155 3.44903,7.70125 0.59322,1.99908 0.78712,4.11578 0.56697,6.18937 l -4.44122,-9.3549 -12.09524,-30.56885 3.59077,-6.33108 z"
-           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__TRICEPS__;fill-opacity:1;stroke:#4a4456;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
+           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__NEUTRAL__;fill-opacity:1;stroke:#4a4456;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
         <path
            inkscape:path-effect="#path-effect1600"
            inkscape:original-d="m 97.954281,277.52598 c -0.189053,0.96912 -0.356095,1.93797 -0.53454,2.90658 -0.178443,0.96859 0.334351,2.4725 0.501131,3.70835 0.166778,1.23587 6.592908,15.07873 9.888968,22.61769 3.29606,7.53896 5.21203,8.41925 7.81764,12.62848 2.60561,4.20923 1.57021,2.53905 1.57021,2.53905 0,0 -5.16695,-12.40549 -7.75082,-18.60862 -2.58387,-6.20316 -3.22924,-10.00009 -4.84426,-15.0005 -1.61502,-5.00044 0.96885,-7.75084 0.96885,-7.75084 0,0 0.22299,-1.02425 0.33409,-1.53678 0.1111,-0.51255 0.7684,-0.93546 0.7684,-0.93546 0,0 0.13363,-2.07134 0.13363,-2.07134 0,0 -5.98015,-4.30972 -5.98015,-4.30972 0,0 -2.873149,5.81311 -2.873149,5.81311 z"
            id="b-path1598"
            d="m 97.954281,277.52598 c -0.33632,0.93068 -0.517736,1.91714 -0.53454,2.90658 -0.02124,1.25041 0.2179,2.49025 0.501131,3.70835 1.871012,8.04669 5.679388,15.50929 9.888968,22.61769 2.52276,4.25999 5.2012,8.42538 7.81764,12.62848 0.52589,0.84481 1.0493,1.69116 1.57021,2.53905 -2.39982,-6.27731 -4.98492,-12.48379 -7.75082,-18.60862 -2.17521,-4.8168 -4.50042,-9.72652 -4.84426,-15.0005 -0.17041,-2.61381 0.16029,-5.2594 0.96885,-7.75084 -0.0287,-0.52979 0.088,-1.06673 0.33409,-1.53678 0.18847,-0.36004 0.45183,-0.68065 0.7684,-0.93546 l 0.13363,-2.07134 -5.98015,-4.30972 z"
-           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__TRICEPS__;fill-opacity:1;stroke:#4a4456;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
+           style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:__NEUTRAL__;fill-opacity:1;stroke:#4a4456;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1" />
         <path
            sodipodi:nodetypes="sscssccs"
            inkscape:original-d="m 106.10484,290.38888 c 0.47609,2.18387 3.60628,10.90216 5.40902,16.35287 1.80274,5.45068 4.90586,12.76778 4.90586,12.76778 0,0 -4.02506,-8.38581 -6.03798,-12.57911 -2.01292,-4.1933 -3.88878,-9.60178 -5.94364,-14.4031 -2.05485,-4.80128 -1.10066,-8.61668 -1.10066,-8.61668 l 1.33833,-0.0741 c 0,0 0.95298,4.36852 1.42907,6.55236 z"
@@ -3110,7 +3110,7 @@
        id="b-path1381"
        sodipodi:nodetypes="cccccc" />
   </g>
-<use xlink:href="#b-path1452" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1648" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1598" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1697" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1652" transform="translate(610.5,0) scale(-1,1)"/>
+<use xlink:href="#b-path1452" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1648" transform="translate(610.5,0) scale(-1,1)"/><use xlink:href="#b-path1652" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1627" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1486" transform="translate(610.5,0) scale(-1,1)"/>
 <use xlink:href="#b-path1432" transform="translate(610.5,0) scale(-1,1)"/>
